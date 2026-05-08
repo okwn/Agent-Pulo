@@ -1,0 +1,32 @@
+{
+  "name": "pulo",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "dev:web": "pnpm --filter pulo-web dev",
+    "dev:api": "pnpm --filter pulo-api dev",
+    "dev:worker": "pnpm --filter pulo-worker dev",
+    "dev:local": "node scripts/dev-up.mjs",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "doctor": "node scripts/doctor.mjs",
+    "lint": "pnpm -r lint",
+    "clean": "pnpm -r clean",
+    "docker:up": "node scripts/dev-up.mjs",
+    "docker:down": "node scripts/dev-down.mjs",
+    "docker:logs": "docker compose logs -f",
+    "demo:seed": "node scripts/demo-seed.mjs",
+    "demo:run": "node scripts/demo-run.mjs",
+    "demo:reset": "node scripts/demo-reset.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "eslint": "^9.20.1",
+    "prettier": "^3.5.3",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.8"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": false,
+    "noImplicitOverride": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "dist",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["apps/web/src"],
+      "@pulo/shared": ["packages/shared/src"],
+      "@pulo/db": ["packages/db/src"],
+      "@pulo/agent-core": ["packages/agent-core/src"],
+      "@pulo/farcaster": ["packages/farcaster/src"],
+      "@pulo/llm": ["packages/llm/src"],
+      "@pulo/safety": ["packages/safety/src"],
+      "@pulo/radar": ["packages/radar/src"],
+      "@pulo/truth": ["packages/truth/src"],
+      "@pulo/notifications": ["packages/notifications/src"],
+      "@pulo/observability": ["packages/observability/src"]
+    }
+  },
+  "exclude": ["node_modules", "dist"]
+}

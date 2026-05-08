@@ -1,0 +1,34 @@
+{
+  "name": "pulo-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc --outDir dist --declaration",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "bullmq": "^5.40.0",
+    "ioredis": "^5.6.0",
+    "@pulo/shared": "workspace:*",
+    "@pulo/observability": "workspace:*",
+    "@pulo/agent-core": "workspace:*",
+    "@pulo/radar": "workspace:*",
+    "@pulo/truth": "workspace:*",
+    "@pulo/safety": "workspace:*",
+    "@pulo/farcaster": "workspace:*",
+    "@pulo/notifications": "workspace:*",
+    "@pulo/llm": "workspace:*",
+    "@pulo/db": "workspace:*",
+    "zod": "^3.24.2",
+    "pino": "^9.6.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.8"
+  }
+}

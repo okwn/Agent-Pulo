@@ -1,0 +1,28 @@
+# deps
+node_modules/
+.pnpm-store/
+
+# env / secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# build outputs
+dist/
+.next/
+output/
+.turbo/
+
+# logs
+*.log
+logs/
+
+# docker
+.docker/
+
+# misc
+.DS_Store
+*.tsbuildinfo
+.cache/
