@@ -216,10 +216,36 @@ export function resetDailyAccumulatorsIfNewDay(): void {
   }
 }
 
-// ─── Default budget guard ──────────────────────────────────────────────────────
+// ─── Storage Factory ───────────────────────────────────────────────────────────
+
+export type BudgetStorageMode = 'memory' | 'redis';
+
+function createStorage(): BudgetStorage | undefined {
+  const mode = (process.env.PULO_BUDGET_STORAGE ?? 'memory') as BudgetStorageMode;
+  if (mode === 'redis') {
+    // Lazy import to avoid hard dependency when not needed
+    const { RedisBudgetStorage } = require('./budget-redis.js');
+    return new RedisBudgetStorage(process.env.REDIS_URL ?? 'redis://localhost:6379');
+  }
+  // In mock/local mode, in-memory is fine; return undefined = in-memory accumulators used
+  return undefined;
+}
+
+// ─── Default budget guard ─────────────────────────────────────────────────────
 
 export function createBudgetGuard(): TokenBudgetGuard {
   const dailyLimit = parseFloat(process.env.PULO_DAILY_LLM_COST_LIMIT_USD ?? '5.0');
+  const storage = createStorage();
+
+  if (storage) {
+    return new TokenBudgetGuard({
+      dailyLimitUsd: dailyLimit,
+      maxInputTokens: 128_000,
+      maxOutputTokens: 16_384,
+      storage,
+    });
+  }
+
   return new TokenBudgetGuard({
     dailyLimitUsd: dailyLimit,
     maxInputTokens: 128_000,

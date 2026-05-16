@@ -13,6 +13,7 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: pulo_postgres
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-pulo}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pulo_dev_password}
@@ -31,6 +32,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: pulo_redis
+    restart: unless-stopped
     ports:
       - "${PULO_REDIS_PORT:-6379}:6379"
     healthcheck:
@@ -44,6 +46,7 @@ services:
       context: ../..
       dockerfile: infra/docker/api.Dockerfile
     container_name: pulo_api
+    restart: unless-stopped
     environment:
       <<: *common-env
       DATABASE_URL: postgres://${POSTGRES_USER:-pulo}:${POSTGRES_PASSWORD:-pulo_dev_password}@postgres:5432/${POSTGRES_DB:-pulo_dev}
@@ -72,6 +75,7 @@ services:
       context: ../..
       dockerfile: infra/docker/worker.Dockerfile
     container_name: pulo_worker
+    restart: unless-stopped
     environment:
       <<: *common-env
       DATABASE_URL: postgres://${POSTGRES_USER:-pulo}:${POSTGRES_PASSWORD:-pulo_dev_password}@postgres:5432/${POSTGRES_DB:-pulo_dev}
@@ -96,6 +100,7 @@ services:
       context: ../..
       dockerfile: infra/docker/web.Dockerfile
     container_name: pulo_web
+    restart: unless-stopped
     environment:
       <<: *common-env
       NEXT_PUBLIC_API_URL: http://localhost:${PULO_API_PORT:-4311}
