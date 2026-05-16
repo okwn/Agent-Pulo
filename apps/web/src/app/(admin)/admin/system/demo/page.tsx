@@ -181,7 +181,7 @@ export default function AdminDemoPage() {
             {lastRun && ` • Last run: ${lastRun.toLocaleTimeString()}`}
           </p>
         </div>
-        <Badge variant={status === 'idle' ? 'secondary' : status === 'complete' ? 'success' : 'warning'} size="sm">
+        <Badge variant={status === 'idle' ? 'default' : status === 'complete' ? 'success' : 'warning'} size="sm">
           {status === 'idle' ? 'Ready' : status === 'seeding' ? 'Seeding...' : status === 'running' ? 'Running...' : status === 'complete' ? 'Complete' : 'Error'}
         </Badge>
       </div>
@@ -198,7 +198,7 @@ export default function AdminDemoPage() {
               Seed Demo Data
             </Button>
 
-            <Button onClick={runDemos} disabled={status !== 'idle'} variant="default">
+            <Button onClick={runDemos} disabled={status !== 'idle'} variant="primary">
               {status === 'running' ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />

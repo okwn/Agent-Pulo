@@ -1,7 +1,7 @@
 // MOCK DATA - All sections marked with [MOCK] in UI
 // This file contains seed data for development. Replace with real API calls in production.
 
-export type PlanTier = 'free' | 'pro' | 'team' | 'enterprise';
+export type PlanTier = 'free' | 'pro' | 'creator' | 'community' | 'admin';
 export type SystemStatus = 'operational' | 'degraded' | 'down' | 'unknown';
 export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
 export type Verdict = 'true' | 'false' | 'unverified' | 'misleading';
@@ -537,7 +537,7 @@ interface MockUser {
 
 export const mockUsers: MockUser[] = [
   { id: 'user_1', username: 'faruser', plan: 'pro', castsUsed: 47, castsLimit: 50, status: 'active', createdAt: '2024-01-15' },
-  { id: 'user_2', username: 'defi_king', plan: 'team', castsUsed: 234, castsLimit: 500, status: 'active', createdAt: '2024-02-20' },
+  { id: 'user_2', username: 'defi_king', plan: 'creator', castsUsed: 234, castsLimit: 500, status: 'active', createdAt: '2024-02-20' },
   { id: 'user_3', username: 'eth_maximalist', plan: 'free', castsUsed: 12, castsLimit: 50, status: 'active', createdAt: '2024-03-10' },
   { id: 'user_4', username: 'anon_trader', plan: 'pro', castsUsed: 89, castsLimit: 50, status: 'active', createdAt: '2024-04-05' },
   { id: 'user_5', username: 'new_user', plan: 'free', castsUsed: 5, castsLimit: 50, status: 'pending', createdAt: '2026-05-08' },

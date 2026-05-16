@@ -13,8 +13,10 @@ import { agentEventsRoutes } from './routes/agent-events.js';
 import { userRoutes } from './routes/user.js';
 import { billingRoutes, adminBillingRoutes } from './routes/billing.js';
 import { composerRoutes, draftRoutes } from './routes/composer.js';
-import { adminErrorRoutes, adminJobRoutes, adminHealthRoutes, adminSystemRoutes, adminDebtRoutes, adminDemoRoutes } from './routes/admin.js';
+import { adminErrorRoutes, adminJobRoutes, adminHealthRoutes, adminSystemRoutes, adminDebtRoutes, adminDemoRoutes, adminMockFarcasterRoutes } from './routes/admin.js';
 import { observabilityRoutes } from './routes/observability.js';
+import { getDB, pingDB } from '@pulo/db';
+import Redis from 'ioredis';
 
 const logger = createChildLogger('api');
 
@@ -53,6 +55,7 @@ await app.register(adminHealthRoutes);
 await app.register(adminSystemRoutes);
 await app.register(adminDebtRoutes);
 await app.register(adminDemoRoutes);
+await app.register(adminMockFarcasterRoutes);
 await app.register(observabilityRoutes);
 
 app.get('/health', async () => ({
@@ -64,9 +67,41 @@ app.get('/health', async () => ({
 }));
 
 app.get('/health/ready', async (req, reply) => {
-  // TODO: check DB + Redis connectivity
-  return { status: 'ready', timestamp: new Date().toISOString() };
+  const checks: { component: string; status: 'ok' | 'error'; latencyMs?: number; message?: string }[] = [];
+
+  // DB check
+  const dbStart = Date.now();
+  try {
+    const ok = await pingDB();
+    checks.push({ component: 'database', status: ok ? 'ok' : 'error', latencyMs: Date.now() - dbStart });
+  } catch (err) {
+    checks.push({ component: 'database', status: 'error', latencyMs: Date.now() - dbStart, message: String(err) });
+  }
+
+  // Redis check
+  const redisStart = Date.now();
+  try {
+    const redisUrl = process.env.REDIS_URL ?? 'redis://localhost:6388';
+    const redis = new Redis(redisUrl, { lazyConnect: true, connectTimeout: 5000, maxRetriesPerRequest: 1 });
+    await redis.ping();
+    await redis.quit();
+    checks.push({ component: 'redis', status: 'ok', latencyMs: Date.now() - redisStart });
+  } catch (err) {
+    checks.push({ component: 'redis', status: 'error', latencyMs: Date.now() - redisStart, message: String(err) });
+  }
+
+  const allOk = checks.every(c => c.status === 'ok');
+  return reply.status(allOk ? 200 : 503).send({
+    status: allOk ? 'ready' : 'not_ready',
+    timestamp: new Date().toISOString(),
+    checks,
+  });
 });
+
+app.get('/health/live', async () => ({
+  status: 'ok',
+  timestamp: new Date().toISOString(),
+}));
 
 app.get('/', async () => ({ name: 'PULO API', version: '0.1.0' }));
 

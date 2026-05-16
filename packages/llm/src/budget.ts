@@ -1,8 +1,11 @@
-// llm/src/budget.ts — Token budget guard and cost estimator
+// llm/src/budget.ts — Token budget guard and cost estimator with in-memory storage
 
 import type { LlmMessage, TokenBudgetResult, CostAccumulator } from './types.js';
-import { MODEL_CONFIGS, DEFAULT_SMALL_MODEL, DEFAULT_LARGE_MODEL } from './types.js';
-import { LlmBudgetExceededError, LlmContextLengthError } from './types.js';
+import { MODEL_CONFIGS } from './types.js';
+import { LlmContextLengthError } from './types.js';
+
+// Re-export Redis storage from separate file (lazy-loaded to avoid hard dependency)
+export { RedisBudgetStorage } from './budget-redis.js';
 
 // ─── Cost Estimator ───────────────────────────────────────────────────────────
 
@@ -21,39 +24,71 @@ export function estimateRequestCost(
   return { inputTokens, outputTokens: estimatedOutputTokens, costUsd };
 }
 
-// ─── Daily Cost Tracker ───────────────────────────────────────────────────────
+// ─── Storage Interface ────────────────────────────────────────────────────────
 
-let dailyAccumulator: CostAccumulator = {
-  totalInputTokens: 0,
-  totalOutputTokens: 0,
-  totalCostUsd: 0,
-  date: todayStr(),
-};
-
-function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
+export interface BudgetStorage {
+  getDailyUsage(userId: number): Promise<CostAccumulator | null>;
+  setDailyUsage(userId: number, usage: CostAccumulator): Promise<void>;
+  incrDailyUsage(userId: number, inputTokens: number, outputTokens: number, costUsd: number): Promise<void>;
+  getGlobalDailyUsage(): Promise<CostAccumulator | null>;
+  setGlobalDailyUsage(usage: CostAccumulator): Promise<void>;
+  incrGlobalDailyUsage(inputTokens: number, outputTokens: number, costUsd: number): Promise<void>;
 }
 
-function isToday(dateStr: string): boolean {
-  return dateStr === todayStr();
+// ─── In-Memory Storage (for tests / dev) ─────────────────────────────────────
+
+interface MemEntry {
+  inputTokens: number;
+  outputTokens: number;
+  totalCostUsd: number;
+  date: string;
 }
 
-export function resetDailyAccumulatorsIfNewDay(): void {
-  if (!isToday(dailyAccumulator.date)) {
-    dailyAccumulator = { totalInputTokens: 0, totalOutputTokens: 0, totalCostUsd: 0, date: todayStr() };
+export class InMemoryBudgetStorage implements BudgetStorage {
+  private userBudgets = new Map<number, MemEntry>();
+  private globalBudget: MemEntry = { inputTokens: 0, outputTokens: 0, totalCostUsd: 0, date: todayStr() };
+
+  async getDailyUsage(userId: number): Promise<CostAccumulator | null> {
+    const entry = this.userBudgets.get(userId);
+    if (!entry || entry.date !== todayStr()) return null;
+    return { totalInputTokens: entry.inputTokens, totalOutputTokens: entry.outputTokens, totalCostUsd: entry.totalCostUsd, date: entry.date };
   }
-}
 
-export function getDailyAccumulator(): CostAccumulator {
-  resetDailyAccumulatorsIfNewDay();
-  return { ...dailyAccumulator };
-}
+  async setDailyUsage(userId: number, usage: CostAccumulator): Promise<void> {
+    this.userBudgets.set(userId, { inputTokens: usage.totalInputTokens, outputTokens: usage.totalOutputTokens, totalCostUsd: usage.totalCostUsd, date: todayStr() });
+  }
 
-export function addToDailyCost(inputTokens: number, outputTokens: number, costUsd: number): void {
-  resetDailyAccumulatorsIfNewDay();
-  dailyAccumulator.totalInputTokens += inputTokens;
-  dailyAccumulator.totalOutputTokens += outputTokens;
-  dailyAccumulator.totalCostUsd += costUsd;
+  async incrDailyUsage(userId: number, inputTokens: number, outputTokens: number, costUsd: number): Promise<void> {
+    const today = todayStr();
+    const existing = this.userBudgets.get(userId);
+    if (!existing || existing.date !== today) {
+      this.userBudgets.set(userId, { inputTokens, outputTokens, totalCostUsd: costUsd, date: today });
+    } else {
+      existing.inputTokens += inputTokens;
+      existing.outputTokens += outputTokens;
+      existing.totalCostUsd += costUsd;
+    }
+  }
+
+  async getGlobalDailyUsage(): Promise<CostAccumulator | null> {
+    if (this.globalBudget.date !== todayStr()) return null;
+    return { totalInputTokens: this.globalBudget.inputTokens, totalOutputTokens: this.globalBudget.outputTokens, totalCostUsd: this.globalBudget.totalCostUsd, date: this.globalBudget.date };
+  }
+
+  async setGlobalDailyUsage(usage: CostAccumulator): Promise<void> {
+    this.globalBudget = { inputTokens: usage.totalInputTokens, outputTokens: usage.totalOutputTokens, totalCostUsd: usage.totalCostUsd, date: todayStr() };
+  }
+
+  async incrGlobalDailyUsage(inputTokens: number, outputTokens: number, costUsd: number): Promise<void> {
+    const today = todayStr();
+    if (this.globalBudget.date !== today) {
+      this.globalBudget = { inputTokens, outputTokens, totalCostUsd: costUsd, date: today };
+    } else {
+      this.globalBudget.inputTokens += inputTokens;
+      this.globalBudget.outputTokens += outputTokens;
+      this.globalBudget.totalCostUsd += costUsd;
+    }
+  }
 }
 
 // ─── Token Budget Guard ───────────────────────────────────────────────────────
@@ -62,76 +97,51 @@ export interface BudgetGuardConfig {
   dailyLimitUsd: number;
   maxInputTokens: number;
   maxOutputTokens: number;
+  storage?: BudgetStorage;
+  globalDailyLimitUsd?: number;
+}
+
+function todayStr(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
 export class TokenBudgetGuard {
-  private config: BudgetGuardConfig;
+  private config: {
+    dailyLimitUsd: number;
+    maxInputTokens: number;
+    maxOutputTokens: number;
+    storage?: BudgetStorage;
+    globalDailyLimitUsd?: number;
+  };
 
   constructor(config: BudgetGuardConfig) {
-    this.config = config;
-  }
-
-  /**
-   * Check if a request fits within token and cost budgets.
-   * Throws LlmBudgetExceededError if daily cost budget exceeded.
-   * Throws LlmContextLengthError if input exceeds token limit.
-   */
-  checkRequest(messages: LlmMessage[], modelKey: string, estimatedOutputTokens = 500): TokenBudgetResult {
-    const { inputTokens, outputTokens, costUsd } = estimateRequestCost(messages, modelKey, estimatedOutputTokens);
-
-    // Check daily cost budget
-    resetDailyAccumulatorsIfNewDay();
-    if (dailyAccumulator.totalCostUsd + costUsd > this.config.dailyLimitUsd) {
-      return {
-        allowed: false,
-        estimatedInputTokens: inputTokens,
-        estimatedOutputTokens: outputTokens,
-        estimatedCostUsd: costUsd,
-        reason: `Daily cost budget exceeded: $${dailyAccumulator.totalCostUsd.toFixed(4)} + $${costUsd.toFixed(4)} > $${this.config.dailyLimitUsd}`,
-      };
-    }
-
-    // Check input token limit
-    const modelConfig = MODEL_CONFIGS[modelKey];
-    const maxInput = modelConfig?.maxInputTokens ?? this.config.maxInputTokens;
-    if (inputTokens > maxInput) {
-      return {
-        allowed: false,
-        estimatedInputTokens: inputTokens,
-        estimatedOutputTokens: outputTokens,
-        estimatedCostUsd: costUsd,
-        reason: `Input tokens ${inputTokens} exceed limit ${maxInput}`,
-      };
-    }
-
-    // Check output token limit
-    if (estimatedOutputTokens > this.config.maxOutputTokens) {
-      return {
-        allowed: false,
-        estimatedInputTokens: inputTokens,
-        estimatedOutputTokens: outputTokens,
-        estimatedCostUsd: costUsd,
-        reason: `Output tokens ${estimatedOutputTokens} exceed limit ${this.config.maxOutputTokens}`,
-      };
-    }
-
-    return {
-      allowed: true,
-      estimatedInputTokens: inputTokens,
-      estimatedOutputTokens: outputTokens,
-      estimatedCostUsd: costUsd,
+    this.config = {
+      dailyLimitUsd: config.dailyLimitUsd,
+      maxInputTokens: config.maxInputTokens,
+      maxOutputTokens: config.maxOutputTokens,
+      storage: config.storage,
+      globalDailyLimitUsd: config.globalDailyLimitUsd ?? config.dailyLimitUsd,
     };
   }
 
-  /**
-   * Check budget and throw if not allowed.
-   */
+  checkRequest(messages: LlmMessage[], modelKey: string, estimatedOutputTokens = 500): TokenBudgetResult {
+    const { inputTokens, outputTokens, costUsd } = estimateRequestCost(messages, modelKey, estimatedOutputTokens);
+
+    const modelConfig = MODEL_CONFIGS[modelKey];
+    const maxInput = modelConfig?.maxInputTokens ?? this.config.maxInputTokens;
+    if (inputTokens > maxInput) {
+      return { allowed: false, estimatedInputTokens: inputTokens, estimatedOutputTokens: outputTokens, estimatedCostUsd: costUsd, reason: `Input tokens ${inputTokens} exceed limit ${maxInput}` };
+    }
+    if (estimatedOutputTokens > this.config.maxOutputTokens) {
+      return { allowed: false, estimatedInputTokens: inputTokens, estimatedOutputTokens: outputTokens, estimatedCostUsd: costUsd, reason: `Output tokens ${estimatedOutputTokens} exceed limit ${this.config.maxOutputTokens}` };
+    }
+
+    return { allowed: true, estimatedInputTokens: inputTokens, estimatedOutputTokens: outputTokens, estimatedCostUsd: costUsd };
+  }
+
   enforceOrThrow(messages: LlmMessage[], modelKey: string, estimatedOutputTokens = 500): void {
     const result = this.checkRequest(messages, modelKey, estimatedOutputTokens);
     if (!result.allowed) {
-      if (result.reason?.includes('cost') || result.reason?.includes('Daily')) {
-        throw new LlmBudgetExceededError(this.config.dailyLimitUsd, dailyAccumulator.totalCostUsd);
-      }
       if (result.reason?.includes('exceed limit')) {
         const modelConfig = MODEL_CONFIGS[modelKey];
         throw new LlmContextLengthError(modelKey, modelConfig?.maxInputTokens ?? this.config.maxInputTokens);
@@ -140,19 +150,69 @@ export class TokenBudgetGuard {
     }
   }
 
-  /**
-   * After a successful LLM call, record the actual costs.
-   */
-  recordUsage(inputTokens: number, outputTokens: number, costUsd: number): void {
-    addToDailyCost(inputTokens, outputTokens, costUsd);
+  async checkUserBudget(userId: number, estimatedCostUsd: number): Promise<{ allowed: boolean; reason?: string; remainingUsd: number }> {
+    const storage = this.config.storage;
+    if (!storage) {
+      return { allowed: true, remainingUsd: this.config.dailyLimitUsd };
+    }
+    const usage = await storage.getDailyUsage(userId);
+    const remaining = this.config.dailyLimitUsd - (usage?.totalCostUsd ?? 0);
+    if (remaining < estimatedCostUsd) {
+      return { allowed: false, reason: `User daily budget exceeded`, remainingUsd: remaining };
+    }
+    return { allowed: true, remainingUsd: remaining };
   }
 
-  getDailyCost(): number {
-    return getDailyAccumulator().totalCostUsd;
+  async recordUsage(inputTokens: number, outputTokens: number, costUsd: number, userId?: number): Promise<void> {
+    const storage = this.config.storage;
+    if (storage) {
+      if (userId !== undefined) {
+        await storage.incrDailyUsage(userId, inputTokens, outputTokens, costUsd);
+      }
+      await storage.incrGlobalDailyUsage(inputTokens, outputTokens, costUsd);
+    }
+  }
+
+  async getDailyCost(): Promise<number> {
+    const storage = this.config.storage;
+    if (storage) {
+      const usage = await storage.getGlobalDailyUsage();
+      return usage?.totalCostUsd ?? 0;
+    }
+    return 0;
   }
 
   getRemainingBudget(): number {
-    return this.config.dailyLimitUsd - getDailyAccumulator().totalCostUsd;
+    return this.config.dailyLimitUsd;
+  }
+}
+
+// ─── Module-level accumulators (in-memory fallback) ───────────────────────────
+
+let _dailyAccumulator: CostAccumulator = { totalInputTokens: 0, totalOutputTokens: 0, totalCostUsd: 0, date: todayStr() };
+
+export function getDailyAccumulator(): CostAccumulator {
+  const today = todayStr();
+  if (_dailyAccumulator.date !== today) {
+    _dailyAccumulator = { totalInputTokens: 0, totalOutputTokens: 0, totalCostUsd: 0, date: today };
+  }
+  return { ..._dailyAccumulator };
+}
+
+export function addToDailyCost(inputTokens: number, outputTokens: number, costUsd: number): void {
+  const today = todayStr();
+  if (_dailyAccumulator.date !== today) {
+    _dailyAccumulator = { totalInputTokens: 0, totalOutputTokens: 0, totalCostUsd: 0, date: today };
+  }
+  _dailyAccumulator.totalInputTokens += inputTokens;
+  _dailyAccumulator.totalOutputTokens += outputTokens;
+  _dailyAccumulator.totalCostUsd += costUsd;
+}
+
+export function resetDailyAccumulatorsIfNewDay(): void {
+  const today = todayStr();
+  if (_dailyAccumulator.date !== today) {
+    _dailyAccumulator = { totalInputTokens: 0, totalOutputTokens: 0, totalCostUsd: 0, date: today };
   }
 }
 

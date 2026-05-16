@@ -11,7 +11,7 @@ import {
   type UsageInfo,
 } from '@pulo/billing';
 import { DEMO_COOKIE, verifyDemoSessionToken } from '@pulo/auth';
-import { userRepository } from '@pulo/db';
+import { userRepository, getDB } from '@pulo/db';
 
 export async function billingRoutes(app: FastifyInstance) {
   const provider = createSubscriptionProvider();
@@ -29,7 +29,7 @@ export async function billingRoutes(app: FastifyInstance) {
     if (!token) return null;
     const payload = verifyDemoSessionToken(token);
     if (!payload) return null;
-    return userRepository.findByFid(req.server.db as any, payload.fid);
+    return userRepository.findByFid(getDB(), payload.fid);
   }
 
   // GET /api/billing/plan - Get current user's plan info
@@ -109,7 +109,7 @@ export async function billingRoutes(app: FastifyInstance) {
     }
 
     // Get all users
-    const users = await userRepository.findAll(req.server.db as any, 1000);
+    const users = await userRepository.findAll(getDB(), 1000);
 
     let synced = 0;
     let failed = 0;
@@ -144,7 +144,7 @@ export async function adminBillingRoutes(app: FastifyInstance) {
     if (!token) return false;
     const payload = verifyDemoSessionToken(token);
     if (!payload) return false;
-    const user = await userRepository.findByFid(req.server.db as any, payload.fid);
+    const user = await userRepository.findByFid(getDB(), payload.fid);
     return user?.id === 1; // FID 1 is admin in demo mode
   }
 

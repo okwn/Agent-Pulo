@@ -78,6 +78,18 @@ Reject a detected trend.
 }
 ```
 
+### POST /api/admin/radar/trends/:id/alert
+
+Mark a trend as alerted — sends to relevant users.
+
+**Response:**
+```json
+{
+  "success": true,
+  "trend": RadarTrend
+}
+```
+
 ## Types
 
 ```ts
@@ -85,11 +97,11 @@ interface RadarTrend {
   id: string;
   title: string;
   normalizedTitle: string | null;
-  category: 'claim' | 'reward_program' | 'token_launch' | 'airdrop' | 'grant' | 'hackathon' | 'scam_warning' | 'social_trend' | 'unknown';
+  category: 'claim' | 'airdrop' | 'reward_program' | 'token_launch' | 'grant' | 'hackathon' | 'scam_warning' | 'social_trend' | 'farcaster_meta' | 'miniapp_opportunity' | 'unknown';
   keywords: string[];
   score: number;
   velocity: number;
-  riskLevel: 'low' | 'medium' | 'high' | 'critical' | 'unknown';
+  riskLevel: 'low' | 'medium' | 'high' | 'unknown';
   confidence: number;
   adminStatus: 'detected' | 'watching' | 'approved' | 'rejected' | 'alerted' | 'archived';
   firstSeenAt: string;

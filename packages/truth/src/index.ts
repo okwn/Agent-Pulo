@@ -37,3 +37,7 @@ export { TruthReportFormatter, truthReportFormatter } from './report-formatter.j
 
 // Orchestrator
 export { TruthChecker, truthChecker, type TruthCheckerConfig } from './truth-checker.js';
+
+// Search Provider
+export type { WebSearchProvider, SearchResult } from './search-provider.js';
+export { createSearchProvider, MockSearchProvider } from './search-provider.js';

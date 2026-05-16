@@ -1,7 +1,7 @@
 // @pulo/auth — Authentication abstraction layer
 // Provides a uniform interface for Sign In with Farcaster (future) and Demo auth
 
-import type { User } from '@pulo/db/src/schema.js';
+import type { User } from '../../db/src/schema.js';
 
 export interface AuthUser {
   id: number;
@@ -68,7 +68,10 @@ export function createDemoSessionToken(fid: number, username: string, expiresAt:
 
 export function verifyDemoSessionToken(token: string): { fid: number; username: string } | null {
   try {
-    const [dataB64, sigB64] = token.split('.');
+    const parts = token.split('.');
+    if (parts.length !== 2) return null;
+    const [dataB64, sigB64] = parts;
+    if (!dataB64 || !sigB64) return null;
     const expectedSig = Buffer.from(`${dataB64}.${DEMO_SECRET}`).toString('base64url');
     if (sigB64 !== expectedSig) return null;
     const payload = JSON.parse(Buffer.from(dataB64, 'base64url').toString());
@@ -197,21 +200,10 @@ let _authProvider: AuthProvider | null = null;
 export function createAuthProvider(config?: AuthFactoryConfig): AuthProvider {
   if (_authProvider) return _authProvider;
 
-  const mode = config ? 'demo' : 'demo'; // Default to demo mode
+  // Currently hardcoded to demo mode; farcaster/neynar auth requires full OAuth flow
+  _authProvider = new DemoAuthProvider(config?.demo);
 
-  switch (mode) {
-    case 'demo':
-      _authProvider = new DemoAuthProvider(config?.demo);
-      break;
-    case 'farcaster':
-      _authProvider = new FarcaSterAuthProvider();
-      break;
-    case 'neynar':
-      _authProvider = new NeynarAuthProvider(config?.neynar?.apiKey);
-      break;
-    default:
-      _authProvider = new DemoAuthProvider();
-  }
+  void config; // config will be used when farcaster/neynar auth is implemented
 
   return _authProvider;
 }

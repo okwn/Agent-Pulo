@@ -26,20 +26,24 @@ import {
   PublishError,
   SignerError,
   isRetryable,
+  CastFetchError,
+  ApiKeyMissingError,
+  SignerMissingError,
+  PublishFailedError,
 } from '../errors.js';
 
 // ─── Validation helpers ─────────────────────────────────────────────────────────
 
 function requireKey(key: string, name: string): string {
   if (!key || key.startsWith('PLACEHOLDER') || key === 'undefined') {
-    throw new MissingCredentialsError('Neynar', name);
+    throw new ApiKeyMissingError(`${name} is required for live mode`);
   }
   return key;
 }
 
 function requireSignerKey(key: string | undefined): string {
-  if (!key || key === 'undefined') {
-    throw new MissingCredentialsError('Neynar', 'FARCASTER_BOT_SIGNER_UUID');
+  if (!key || key === 'undefined' || key.startsWith('PLACEHOLDER')) {
+    throw new SignerMissingError('FARCASTER_BOT_SIGNER_UUID is required to publish casts');
   }
   return key;
 }
@@ -119,8 +123,14 @@ class NeynarReadProviderImpl implements IFarcasterReadProvider {
       const retryAfter = res.headers.get('retry-after');
       throw new RateLimitError('Neynar', retryAfter ? parseInt(retryAfter, 10) * 1000 : undefined);
     }
-    if (res.status === 404) throw new Error(`Not found: ${path}`);
-    if (!res.ok) throw new Error(`Neynar API error: ${res.status} ${res.statusText}`);
+    if (res.status === 404) {
+      const hash = params?.hash ?? path.includes('replies') ? 'unknown' : 'unknown';
+      throw new CastFetchError(hash, `404 from Neynar API: ${path}`);
+    }
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new CastFetchError(params?.hash ?? 'unknown', `HTTP ${res.status}: ${body}`);
+    }
     return res.json() as Promise<T>;
   }
 
@@ -220,9 +230,12 @@ class NeynarWriteProviderImpl implements IFarcasterWriteProvider {
       headers: { api_key: this.apiKey, 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    if (res.status === 403) throw new SignerError('Signer rejected the operation');
+    if (res.status === 403) throw new SignerError('Signer rejected the operation', 'FARCASTER_SIGNER_MISSING');
     if (res.status === 429) throw new RateLimitError('Neynar');
-    if (!res.ok) throw new PublishError('', await res.text());
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => '');
+      throw new PublishFailedError(`HTTP ${res.status}: ${errBody}`);
+    }
     return res.json() as Promise<T>;
   }
 

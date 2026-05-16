@@ -12,6 +12,8 @@ export type {
   LlmResponse,
   CostAccumulator,
   TokenBudgetResult,
+  FallbackRecord,
+  LlmResponseWithHistory,
 } from './types.js';
 
 export { LLM_MODES } from './types.js';
@@ -34,6 +36,7 @@ export { OpenAiProvider } from './providers/openai.js';
 export { AnthropicProvider } from './providers/anthropic.js';
 export { MockLlmProvider, mockLlmProvider } from './providers/mock.js';
 export { LocalLlmProvider } from './providers/local.js';
+export { AutoFallbackLlmProvider } from './providers/auto-fallback.js';
 
 // Router
 export { ModelRouter, createRouter, modelRouter } from './router.js';
@@ -48,6 +51,8 @@ export {
   addToDailyCost,
   resetDailyAccumulatorsIfNewDay,
   type BudgetGuardConfig,
+  InMemoryBudgetStorage,
+  RedisBudgetStorage,
 } from './budget.js';
 
 // Retry
@@ -57,7 +62,7 @@ export { withRetry, DEFAULT_RETRY_CONFIG, type RetryConfig } from './retry.js';
 export { parseJsonOrRecover } from './parser.js';
 
 // Prompts
-export { loadPrompt, listPromptVersions, type PromptTemplate, type PromptMetadata } from './prompts.js';
+export { loadPrompt, listPromptVersions, getPromptMetadata, type PromptTemplate, type PromptMetadata } from './prompts.js';
 
 // Client
 export { LlmClient, createLlmClient, createForMode, type LlmClientConfig, type CreateLlmClientOptions } from './llm.js';

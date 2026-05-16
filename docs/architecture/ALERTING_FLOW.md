@@ -12,6 +12,8 @@ PULO alerting is permission-based and anti-spam. Every alert is saved to the use
 | Mini App | `allowMiniAppNotifications = true` | Any | ❌ |
 | Direct Cast | `allowDirectCasts = true` | Pro/Team/Enterprise | ❌ |
 
+**Mock mode:** `PULO_NOTIFICATION_MODE=mock` (default) — MiniApp and DirectCast providers return mock success without calling any live API. Set `PULO_NOTIFICATION_MODE=live` to enable live delivery.
+
 ## Rules
 
 1. Every alert is saved to the PULO inbox (database `alerts` table).

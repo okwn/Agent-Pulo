@@ -8,6 +8,9 @@ import {
   getAuditStore,
   type AuditEvent,
 } from '@pulo/observability';
+import { getDB, pingDB } from '@pulo/db';
+import Redis from 'ioredis';
+import { diagnoseModes } from '@pulo/shared';
 
 const logger = console;
 
@@ -23,7 +26,7 @@ export async function observabilityRoutes(app: FastifyInstance) {
     });
 
     const store = getMetricsStore();
-    const format = req.query['format'] as string || 'prometheus';
+    const format = ((req as any).query?.format as string) || 'prometheus';
 
     if (format === 'json') {
       return reply.header('Content-Type', 'application/json').send(store.toSnapshot());
@@ -55,7 +58,7 @@ export async function observabilityRoutes(app: FastifyInstance) {
   // GET /health/audit - Recent audit events (admin)
   app.get('/health/audit', async (req: FastifyRequest, reply: FastifyReply) => {
     const auditStore = getAuditStore();
-    const limit = parseInt(req.query['limit'] as string || '100', 10);
+    const limit = parseInt(((req as any).query?.limit as string) || '100', 10);
 
     const events = await auditStore.recent(limit);
 
@@ -98,15 +101,14 @@ async function performHealthChecks(): Promise<HealthCheck[]> {
     });
   }
 
-  // Database check (mock for now)
+  // Database check
   try {
     const dbStart = Date.now();
-    // Simulated DB check - replace with actual DB ping
-    const dbLatency = Date.now() - dbStart;
+    const ok = await pingDB();
     checks.push({
       component: 'database',
-      status: 'ok',
-      latencyMs: dbLatency,
+      status: ok ? 'ok' : 'error',
+      latencyMs: Date.now() - dbStart,
       details: {
         type: 'postgres',
         poolSize: 10,
@@ -121,15 +123,17 @@ async function performHealthChecks(): Promise<HealthCheck[]> {
     });
   }
 
-  // Redis check (mock for now)
+  // Redis check
   try {
     const redisStart = Date.now();
-    // Simulated Redis check - replace with actual Redis ping
-    const redisLatency = Date.now() - redisStart;
+    const redisUrl = process.env.REDIS_URL ?? 'redis://localhost:6388';
+    const redis = new Redis(redisUrl, { lazyConnect: true, connectTimeout: 5000, maxRetriesPerRequest: 1 });
+    await redis.ping();
+    await redis.quit();
     checks.push({
       component: 'redis',
       status: 'ok',
-      latencyMs: redisLatency,
+      latencyMs: Date.now() - redisStart,
       details: {
         memoryUsedMb: 67,
         connectedClients: 8,
@@ -143,14 +147,16 @@ async function performHealthChecks(): Promise<HealthCheck[]> {
     });
   }
 
-  // Far caster check (mock for now)
+  // Far caster check
   try {
+    const modeDiag = diagnoseModes();
     checks.push({
       component: 'farcaster',
-      status: 'ok',
+      status: modeDiag.isHealthy ? 'ok' : 'degraded',
       details: {
-        rateLimitRemaining: 145,
-        mode: process.env.PULO_FARCASTER_MODE ?? 'mock',
+        mode: modeDiag.farcaster,
+        isHealthy: modeDiag.isHealthy,
+        errors: modeDiag.errors,
       },
     });
   } catch (e) {
@@ -161,14 +167,15 @@ async function performHealthChecks(): Promise<HealthCheck[]> {
     });
   }
 
-  // LLM check (mock for now)
+  // LLM check
   try {
+    const modeDiag = diagnoseModes();
     checks.push({
       component: 'llm',
-      status: 'ok',
+      status: modeDiag.isHealthy ? 'ok' : 'degraded',
       details: {
-        quotaRemaining: 8500,
-        model: 'gpt-4o-mini',
+        mode: modeDiag.llm,
+        isHealthy: modeDiag.isHealthy,
       },
     });
   } catch (e) {

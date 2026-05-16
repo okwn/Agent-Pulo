@@ -1,129 +1,145 @@
 # Environment Variables Reference
 
-All environment variables used in PULO, organized by category.
+## Mode Configuration (Independent)
 
-## Service
+Each provider mode operates independently — mock mode needs zero keys.
 
-| Variable | Default | Required | Description |
-|----------|---------|----------|-------------|
-| `PULO_SERVICE_NAME` | `pulo` | Yes | Service identifier in logs |
-| `NODE_ENV` | `development` | Yes | `development` or `production` |
-| `LOG_LEVEL` | `info` | No | Log verbosity: `debug`, `info`, `warn`, `error` |
-| `PULO_FARCASTER_MODE` | `mock` | Yes | `mock` (local dev) or `live` (production) |
+| Variable | Default | Mode | Description |
+|----------|---------|------|-------------|
+| `PULO_APP_ENV` | `local` | all | `local` \| `staging` \| `production` |
+| `PULO_FARCASTER_MODE` | `mock` | farcaster | `mock` (no keys) \| `live` (requires NEYNAR_API_KEY) |
+| `PULO_LLM_MODE` | `mock` | llm | `mock` \| `openai` \| `anthropic` \| `local` |
+| `PULO_SEARCH_MODE` | `mock` | search | `mock` \| `tavily` \| `serpapi` \| `disabled` |
+| `PULO_NOTIFICATION_MODE` | `mock` | notification | `mock` \| `live` |
+| `PULO_BILLING_MODE` | `mock` | billing | `mock` \| `stripe` \| `hypersub` \| `disabled` |
+| `PULO_AUTH_MODE` | `demo` | auth | `demo` \| `farcaster` \| `disabled` |
 
-## API Server
+---
 
-| Variable | Default | Required | Description |
-|----------|---------|----------|-------------|
-| `API_PORT` | `4311` | No | API server port |
-| `ALLOWED_ORIGINS` | `http://localhost:3000` | Yes | Comma-separated CORS origins |
-| `RATE_LIMIT_PER_MINUTE` | `120` | No | Rate limit per IP |
-| `BODY_SIZE_LIMIT` | `1048576` | No | Max request body size in bytes (1MB default) |
-| `DEMO_COOKIE_SECRET` | (generated) | Yes | Secret for demo session cookies |
+## Required Keys by Mode
 
-## Database
+### `PULO_FARCASTER_MODE=live`
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NEYNAR_API_KEY` | **Yes** | Neynar API key for reading/writing casts |
+| `NEYNAR_WEBHOOK_SECRET` |Webhook only | For verifying incoming webhooks |
+| `FARCASTER_BOT_SIGNER_UUID` | Posting only | Signer UUID for the bot account |
 
-| Variable | Default | Required | Description |
-|----------|---------|----------|-------------|
-| `DATABASE_URL` | — | Yes | PostgreSQL connection string |
-| `POSTGRES_HOST` | `localhost` | No | PostgreSQL host |
-| `POSTGRES_PORT` | `5432` | No | PostgreSQL port |
-| `POSTGRES_USER` | `pulo` | No | PostgreSQL username |
-| `POSTGRES_PASSWORD` | — | Yes | PostgreSQL password |
-| `POSTGRES_DB` | `pulo` | No | PostgreSQL database name |
+### `PULO_LLM_MODE=openai`
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `OPENAI_API_KEY` | **Yes** | OpenAI API key |
 
-Example `DATABASE_URL`:
-```
-postgresql://pulo:my_strong_password@localhost:5432/pulo
-```
+### `PULO_LLM_MODE=anthropic`
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `ANTHROPIC_API_KEY` | **Yes** | Anthropic API key |
 
-## Redis
+### `PULO_LLM_MODE=local`
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `LOCAL_LLM_URL` | **Yes** | Local LLM server URL (e.g. `http://localhost:11434`) |
 
-| Variable | Default | Required | Description |
-|----------|---------|----------|-------------|
-| `REDIS_URL` | `redis://localhost:6379` | Yes | Redis connection string |
-| `REDIS_HOST` | `localhost` | No | Redis host |
-| `REDIS_PORT` | `6379` | No | Redis port |
-| `REDIS_PASSWORD` | (none) | No | Redis password (if auth enabled) |
+### `PULO_SEARCH_MODE=tavily`
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `TAVILY_API_KEY` | **Yes** | Tavily API key for truth search |
 
-## Neynar (Farcaster Integration)
+### `PULO_SEARCH_MODE=serpapi`
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `SERPAPI_API_KEY` | **Yes** | SerpAPI API key |
 
-| Variable | Default | Required | Description |
-|----------|---------|----------|-------------|
-| `NEYNAR_API_KEY` | — | **Yes for live mode** | Neynar API key |
-| `NEYNAR_WEBHOOK_SECRET` | — | **Yes for live mode** | Webhook signature secret |
-| `NEYNAR_SIGNER_UUID` | — | **Yes for posting** | Bot's Far caster signer UUID |
-| `PULO_FARCASTER_BOT_FID` | `1` | No | Bot's FID (default: 1 for demo) |
+### `PULO_BILLING_MODE=stripe`
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `STRIPE_SECRET_KEY` | **Yes** | Stripe secret key |
+| `STRIPE_WEBHOOK_SECRET` |Webhook only | Stripe webhook verification secret |
 
-**Note:** `NEYNAR_API_KEY` must NOT be `PLACEHOLDER` or `undefined` in production. The server will refuse to start.
+---
 
-## LLM Providers
-
-| Variable | Default | Required | Description |
-|----------|---------|----------|-------------|
-| `OPENAI_API_KEY` | — | **Yes for live mode** | OpenAI API key (for GPT models) |
-| `ANTHROPIC_API_KEY` | — | No | Anthropic API key (for Claude models) |
-| `LLM_MODEL` | `gpt-4o-mini` | No | Default LLM model |
-| `LLM_MAX_TOKENS` | `1000` | No | Max tokens per request |
-
-## Mini App Notifications
+## Always-Required (No Mode Dependency)
 
 | Variable | Default | Required | Description |
 |----------|---------|----------|-------------|
-| `MINI_APP_NOTIFICATION_ENABLED` | `false` | No | Enable Mini App notifications |
-| `MINI_APP_BOT_FID` | — | Conditional | Bot FID for sending notifications |
-| `MINI_APP_WEBAPP_URL` | — | Conditional | WebApp URL for deep links |
+| `DATABASE_URL` | — | **Yes** | PostgreSQL connection string |
+| `REDIS_URL` | — | **Yes** | Redis connection string |
 
-## Observability
+---
 
-| Variable | Default | Required | Description |
-|----------|---------|----------|-------------|
-| `METRICS_ENABLED` | `true` | No | Enable metrics collection |
-| `SENTRY_DSN` | — | No | Sentry error tracking |
-| `LOGDNA_KEY` | — | No | LogDNA log aggregation |
-
-## Demo Mode
-
-| Variable | Default | Required | Description |
-|----------|---------|----------|-------------|
-| `DEMO_USER_FID` | `1` | No | Demo user's FID |
-| `DEMO_USER_USERNAME` | `demo` | No | Demo user's username |
-| `DEMO_USER_DISPLAY_NAME` | `Demo User` | No | Demo user's display name |
-
-## Ports (Docker/Local Dev)
+## Optional Keys (No Mode Dependency)
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PULO_API_PORT` | `4311` | API host port |
+| `NODE_ENV` | `development` | `development` \| `production` \| `test` |
+| `LOG_LEVEL` | `info` | `debug` \| `info` \| `warn` \| `error` |
 | `PULO_WEB_PORT` | `4310` | Web host port |
+| `PULO_API_PORT` | `4311` | API host port |
 | `PULO_WORKER_PORT` | `4312` | Worker health port |
-| `PULO_POSTGRES_PORT` | `5544` | PostgreSQL host port |
-| `PULO_REDIS_PORT` | `6388` | Redis host port |
+| `PULO_POSTGRES_PORT` | `5432` | PostgreSQL host port |
+| `PULO_REDIS_PORT` | `6379` | Redis host port |
 
-## Docker Compose
+---
 
-```yaml
-# Minimum required for live mode
-services:
-  api:
-    environment:
-      - NODE_ENV=production
-      - PULO_FARCASTER_MODE=live
-      - DATABASE_URL=postgresql://pulo:${POSTGRES_PASSWORD}@postgres:5432/pulo
-      - REDIS_URL=redis://redis:6379
-      - NEYNAR_API_KEY=${NEYNAR_API_KEY}
-      - NEYNAR_WEBHOOK_SECRET=${NEYNAR_WEBHOOK_SECRET}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - ALLOWED_ORIGINS=https://your-domain.com
+## Optional Provider Keys
+
+| Variable | Description |
+|----------|-------------|
+| `OPENAI_API_KEY` | Required only if `PULO_LLM_MODE=openai` |
+| `ANTHROPIC_API_KEY` | Required only if `PULO_LLM_MODE=anthropic` |
+| `TAVILY_API_KEY` | Required only if `PULO_SEARCH_MODE=tavily` |
+| `SERPAPI_API_KEY` | Required only if `PULO_SEARCH_MODE=serpapi` |
+| `STRIPE_SECRET_KEY` | Required only if `PULO_BILLING_MODE=stripe` |
+| `NEYNAR_API_KEY` | Required only if `PULO_FARCASTER_MODE=live` |
+| `FARCASTER_BOT_SIGNER_UUID` | Bot signer for posting casts |
+| `WARPCAST_API_KEY` | Optional, for direct cast via Warpcast |
+| `SENTRY_DSN` | Optional, Sentry error tracking |
+| `LOGDNA_KEY` | Optional, LogDNA log aggregation |
+
+---
+
+## .env.example Sections
+
+```bash
+# ─── Modes ──────────────────────────────────────────────────────────
+PULO_APP_ENV=local                    # local | staging | production
+PULO_FARCASTER_MODE=mock             # mock | live
+PULO_LLM_MODE=mock                   # mock | openai | anthropic | local
+PULO_SEARCH_MODE=mock                # mock | tavily | serpapi | disabled
+PULO_NOTIFICATION_MODE=mock         # mock | live
+PULO_BILLING_MODE=mock               # mock | stripe | hypersub | disabled
+PULO_AUTH_MODE=demo                 # demo | farcaster | disabled
+
+# ─── Database & Redis ──────────────────────────────────────────────
+DATABASE_URL=postgresql://pulo:pulo_dev_password@localhost:5432/pulo_dev
+REDIS_URL=redis://localhost:6379
+
+# ─── Neynar / Far caster (required for PULO_FARCASTER_MODE=live) ──
+NEYNAR_API_KEY=                      # Required for live mode
+NEYNAR_WEBHOOK_SECRET=              # For webhook verification
+FARCASTER_BOT_SIGNER_UUID=          # Bot signer UUID for posting
+
+# ─── LLM Providers ──────────────────────────────────────────────────
+OPENAI_API_KEY=                     # Required for llm=openai
+ANTHROPIC_API_KEY=                  # Required for llm=anthropic
+LOCAL_LLM_URL=http://localhost:11434 # Required for llm=local
+
+# ─── Search ─────────────────────────────────────────────────────────
+TAVILY_API_KEY=                     # Required for search=tavily
+SERPAPI_API_KEY=                    # Required for search=serpapi
+
+# ─── Billing ────────────────────────────────────────────────────────
+STRIPE_SECRET_KEY=                  # Required for billing=stripe
+STRIPE_WEBHOOK_SECRET=             # For Stripe webhook verification
+
+# ─── Optional ──────────────────────────────────────────────────────
+LOG_LEVEL=info
+SENTRY_DSN=
+LOGDNA_KEY=
 ```
+
+---
 
 ## Validation
 
-On startup, PULO validates environment:
-
-```typescript
-// Production mode requires these to be REAL values (not PLACEHOLDER)
-const required = ['NEYNAR_API_KEY', 'DATABASE_URL', 'REDIS_URL'];
-```
-
-If any contain `PLACEHOLDER`, `undefined`, or empty string, production mode refuses to start.
+On startup, PULO diagnoses all modes. Missing required keys produce `AppError` with setup instructions. Run `pnpm doctor` to check mode status and key availability.

@@ -489,6 +489,10 @@ export async function retryAdminJob(id: string): Promise<{ success: boolean; new
   return apiFetch(`/api/admin/jobs/${id}/retry`, { method: 'POST' });
 }
 
+export async function cancelAdminJob(id: string): Promise<{ success: boolean }> {
+  return apiFetch(`/api/admin/jobs/${id}/cancel`, { method: 'POST' });
+}
+
 export async function getAdminHealth(): Promise<HealthStatus> {
   return apiFetch<HealthStatus>('/api/admin/health');
 }

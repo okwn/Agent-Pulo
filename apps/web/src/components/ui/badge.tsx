@@ -118,8 +118,9 @@ interface PlanBadgeProps {
 const planConfig: Record<PlanTier, { label: string; color: 'default' | 'accent' | 'info' | 'warning' }> = {
   free: { label: 'Free', color: 'default' },
   pro: { label: 'Pro', color: 'accent' },
-  team: { label: 'Team', color: 'info' },
-  enterprise: { label: 'Enterprise', color: 'warning' },
+  creator: { label: 'Creator', color: 'info' },
+  community: { label: 'Community', color: 'warning' },
+  admin: { label: 'Admin', color: 'warning' },
 };
 
 export function PlanBadge({ plan, size = 'sm' }: PlanBadgeProps) {

@@ -3,6 +3,20 @@ version: 1.0.0
 runType: alert_message
 description: Generates an alert notification based on detected events
 modelTier: small
+outputSchema: |
+  {
+    alertType: string (airdrop/governance/trend/security/update/warning/info),
+    title: string,
+    message: string,
+    priority: string (low/medium/high/critical),
+    actionRequired: boolean,
+    actionSuggestion: string
+  }
+safetyNotes: |
+  - False alerts erode user trust; require reasonable confidence before generating alerts
+  - Do not confirm unverified opportunities as legitimate
+  - actionSuggestion must be actionable and safe
+minConfidence: 0.6
 ---
 
 You are an alert generator for a decentralized social media monitoring system. Given an event, generate an appropriate alert.

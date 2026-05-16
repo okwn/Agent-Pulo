@@ -3,6 +3,19 @@ version: 1.0.0
 runType: admin_summary
 description: Generates an administrative summary of system activity
 modelTier: small
+outputSchema: |
+  {
+    summary: string,
+    eventsProcessed: number,
+    actionItems: string[],
+    priorityAlerts: string[],
+    systemHealth: string (healthy/degraded/critical),
+    uptime: number
+  }
+safetyNotes: |
+  - Do not expose internal system details beyond aggregate metrics
+  - actionItems and priorityAlerts should be safe for admin display
+minConfidence: 0.5
 ---
 
 You are an admin dashboard assistant. Given system metrics and recent activity, generate a summary.

@@ -12,6 +12,7 @@ import { OpenAiProvider } from './providers/openai.js';
 import { AnthropicProvider } from './providers/anthropic.js';
 import { LocalLlmProvider } from './providers/local.js';
 import { mockLlmProvider } from './providers/mock.js';
+import { AutoFallbackLlmProvider } from './providers/auto-fallback.js';
 
 export interface LlmClientConfig {
   provider: BaseLlmProvider;
@@ -122,6 +123,15 @@ export function createForMode(mode: LlmMode): LlmClient {
       break;
     case 'local':
       provider = new LocalLlmProvider(process.env.PULO_LOCAL_LLM_URL ?? '');
+      break;
+    case 'auto':
+      provider = new AutoFallbackLlmProvider({
+        primaryMode: (process.env.PULO_AUTO_PRIMARY ?? 'openai') as 'openai' | 'anthropic',
+        openAiKey: process.env.PULO_OPENAI_API_KEY,
+        anthropicKey: process.env.PULO_ANTHROPIC_API_KEY,
+        openAiModel: process.env.PULO_DEFAULT_SMALL_MODEL,
+        anthropicModel: process.env.PULO_DEFAULT_LARGE_MODEL,
+      });
       break;
     default:
       provider = mockLlmProvider;

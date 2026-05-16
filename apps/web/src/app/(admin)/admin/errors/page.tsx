@@ -11,6 +11,7 @@ import {
   createAdminError,
   type ErrorRecord,
   type ErrorCode,
+  type ErrorStatus,
 } from '@/lib/api';
 import { formatRelativeTime } from '@/lib/utils';
 import { AlertTriangle, RefreshCw, Plus, CheckCircle, XCircle, Clock, Zap } from 'lucide-react';
@@ -28,9 +29,9 @@ export default function AdminErrorsPage() {
   const loadErrors = useCallback(async () => {
     setLoading(true);
     try {
-      const params: { status?: string; limit?: number } = { limit: 50 };
+      const params: { status?: ErrorStatus; limit?: number } = { limit: 50 };
       if (filter !== 'all') {
-        params.status = filter;
+        params.status = filter as ErrorStatus;
       }
       const data = await getAdminErrors(params);
       setErrors(data.errors);
@@ -61,7 +62,7 @@ export default function AdminErrorsPage() {
   const handleCreateTestError = async () => {
     try {
       const codes: ErrorCode[] = ['LLM_TIMEOUT', 'FARCASTER_RATE_LIMITED', 'SAFETY_BLOCKED'];
-      const randomCode = codes[Math.floor(Math.random() * codes.length)];
+      const randomCode = codes[Math.floor(Math.random() * codes.length)]!;
       await createAdminError({
         code: randomCode,
         message: `Test error for ${randomCode}`,
@@ -82,9 +83,9 @@ export default function AdminErrorsPage() {
       case 'resolved':
         return <Badge variant="success" size="sm">Resolved</Badge>;
       case 'dead_lettered':
-        return <Badge variant="secondary" size="sm">Dead Letter</Badge>;
+        return <Badge variant="danger" size="sm">Dead Letter</Badge>;
       default:
-        return <Badge variant="secondary" size="sm">{status}</Badge>;
+        return <Badge variant="default" size="sm">{status}</Badge>;
     }
   };
 

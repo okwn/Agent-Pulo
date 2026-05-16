@@ -64,7 +64,7 @@ export class TrendScorer {
       trusted_author_score: Math.round(trusted_author_score * 100) / 100,
       engagement_score: Math.round(engagement_score * 100) / 100,
       channel_relevance_score: Math.round(channel_relevance_score * 100) / 100,
-      onchain_or_official_confirmation_score: Math.round(onchain_or_official_confirmation_score * 100) / 100,
+      official_confirmation_score: Math.round(onchain_or_official_confirmation_score * 100) / 100,
       spam_score: Math.round(spam_score * 100) / 100,
       scam_risk_score: Math.round(scam_risk_score * 100) / 100,
       total: Math.round(total),

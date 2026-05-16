@@ -12,6 +12,10 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
+    "test:integration": "cd apps/api && pnpm vitest run integration",
+    "test:e2e": "pnpm --filter pulo-web exec playwright test",
+    "test:e2e:ui": "pnpm --filter pulo-web exec playwright test --ui",
+    "test:all": "pnpm test && pnpm test:integration && pnpm test:e2e",
     "doctor": "node scripts/doctor.mjs",
     "lint": "pnpm -r lint",
     "clean": "pnpm -r clean",
@@ -20,7 +24,12 @@
     "docker:logs": "docker compose logs -f",
     "demo:seed": "node scripts/demo-seed.mjs",
     "demo:run": "node scripts/demo-run.mjs",
-    "demo:reset": "node scripts/demo-reset.mjs"
+    "demo:run:truth": "node scripts/demo-run.mjs --scenario 2",
+    "demo:run:radar": "node scripts/demo-run.mjs --scenario 3",
+    "demo:run:alert": "node scripts/demo-run.mjs --scenario 4",
+    "demo:run:mention": "node scripts/demo-run.mjs --scenario 1",
+    "demo:reset": "node scripts/demo-reset.mjs --force",
+    "farcaster:check": "node scripts/farcaster-check.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.13.10",

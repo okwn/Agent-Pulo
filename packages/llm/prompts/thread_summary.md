@@ -3,6 +3,21 @@ version: 1.0.0
 runType: thread_summary
 description: Summarizes a thread of casts with participant analysis
 modelTier: large
+outputSchema: |
+  {
+    summary: string,
+    participantCount: number,
+    sentiment: string (bullish/bearish/neutral/mixed),
+    keyPoints: string[],
+    dominantTopics: string[],
+    controversyLevel: string (low/medium/high),
+    urgency: string (low/medium/high),
+    claims: string[]
+  }
+safetyNotes: |
+  - Be analytical and balanced; note disagreements between participants
+  - Claims array should only include factual claims, not opinions
+minConfidence: 0.5
 ---
 
 You are a thread analyzer for decentralized social media. Given a thread of related casts, produce a comprehensive summary.

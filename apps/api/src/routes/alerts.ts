@@ -3,7 +3,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { getDB, alertRepository, preferencesRepository } from '@pulo/db';
-import { alertTemplateRenderer, deliveryPlanner, type Alert } from '@pulo/notifications';
+import { alertTemplateRenderer, deliveryPlanner, type Alert, type AlertContext } from '@pulo/notifications';
 import { createChildLogger } from '@pulo/observability';
 import { getProvider } from '@pulo/farcaster';
 
@@ -174,5 +174,84 @@ export async function alertRoutes(fastify: FastifyInstance) {
 
     log.info({ targetFid, alertType }, 'Test alert sent');
     return reply.send({ success: true, alertId: alert.id });
+  });
+
+  // GET /api/admin/alerts — list all alerts (admin)
+  fastify.get('/api/admin/alerts', async (request, reply) => {
+    const { limit = '50', offset = '0', type } = request.query as Record<string, string>;
+
+    const db = getDB();
+    let alerts = await alertRepository.findByUser(db, 0, 1000);
+
+    if (type) alerts = alerts.filter(a => a.type === type);
+
+    const total = alerts.length;
+    const off = parseInt(offset, 10);
+    const paginated = alerts.slice(off, off + parseInt(limit, 10));
+
+    return reply.send({
+      data: paginated.map(a => ({
+        id: a.id,
+        userId: a.userId,
+        type: a.type,
+        title: a.title,
+        body: a.body,
+        readAt: a.readAt,
+        createdAt: a.createdAt,
+      })),
+      total,
+      limit: parseInt(limit, 10),
+      offset: off,
+    });
+  });
+
+  // POST /api/admin/alerts/:id/retry — retry a failed alert delivery
+  fastify.post<{ Params: { id: string } }>('/api/admin/alerts/:id/retry', async (request, reply) => {
+    const { id } = request.params;
+    if (!id) return reply.status(400).send({ error: 'Missing alert ID' });
+
+    const db = getDB();
+    const alert = await alertRepository.findById(db, id);
+    if (!alert) return reply.status(404).send({ error: 'Alert not found' });
+
+    // Re-run delivery planner for this user
+    const prefs = await preferencesRepository.findByFid(db, alert.userId);
+    if (!prefs) return reply.status(404).send({ error: 'User preferences not found' });
+
+    const alertObj: Alert = {
+      id: alert.id,
+      userId: alert.userId,
+      type: alert.type as Alert['type'],
+      title: alert.title ?? 'Retry Alert',
+      body: alert.body ?? '',
+      metadata: alert.metadata ?? {},
+      createdAt: alert.createdAt,
+    };
+
+    const ctx: AlertContext = {
+      alert: alertObj,
+      userPrefs: {
+        userId: alert.userId,
+        riskTolerance: prefs.riskTolerance ?? 'medium',
+        notificationFrequency: prefs.notificationFrequency ?? 'realtime',
+        allowMiniAppNotifications: prefs.allowMiniAppNotifications ?? true,
+        allowDirectCasts: prefs.allowDirectCasts ?? false,
+        allowedTopics: prefs.allowedTopics ?? [],
+        blockedTopics: prefs.blockedTopics ?? [],
+        preferredChannels: [],
+        autoReplyMode: 'off',
+        dailyAlertLimit: prefs.dailyAlertLimit ?? 50,
+        dailyReplyLimit: 10,
+        updatedAt: new Date(),
+      },
+      subscription: null,
+    };
+
+    const todaySent = await alertRepository.countTodayByUser(db, alert.userId);
+    const planResult = await deliveryPlanner.plan(ctx, todaySent);
+    await deliveryPlanner.deliver(planResult.plans);
+
+    log.info({ alertId: id }, 'Alert retry completed');
+    return reply.send({ success: true, deliveredChannels: planResult.plans.map(p => p.channel) });
   });
 }

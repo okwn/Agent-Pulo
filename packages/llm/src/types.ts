@@ -4,9 +4,9 @@ import type { z } from 'zod';
 
 // ─── Provider / Mode ─────────────────────────────────────────────────────────
 
-export type LlmMode = 'mock' | 'openai' | 'anthropic' | 'local';
+export type LlmMode = 'mock' | 'openai' | 'anthropic' | 'local' | 'auto';
 
-export const LLM_MODES = ['mock', 'openai', 'anthropic', 'local'] as const;
+export const LLM_MODES = ['mock', 'openai', 'anthropic', 'local', 'auto'] as const;
 
 // ─── Model Selection ───────────────────────────────────────────────────────────
 
@@ -128,6 +128,19 @@ export interface LlmResponse<T> {
   usage: LlmUsage;
   model: string;
   finishReason: 'stop' | 'length' | 'content_filter' | 'error';
+  provider?: string; // 'openai' | 'anthropic' | 'mock'
+}
+
+export interface LlmResponseWithHistory<T> extends LlmResponse<T> {
+  fallbackHistory: FallbackRecord[];
+}
+
+export interface FallbackRecord {
+  attemptedProvider: string;
+  attemptedModel: string;
+  errorCode: string;
+  errorMessage: string;
+  recovered: boolean;
 }
 
 // ─── Cost Tracking ─────────────────────────────────────────────────────────────

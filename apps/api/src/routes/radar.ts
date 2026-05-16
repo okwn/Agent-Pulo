@@ -181,6 +181,28 @@ export async function radarRoutes(fastify: FastifyInstance) {
     return reply.send({ success: true, trend: formatTrend(updated) });
   });
 
+  // POST /api/admin/radar/trends/:id/alert — mark trend as alerted
+  fastify.post<{ Params: { id: string } }>('/api/admin/radar/trends/:id/alert', async (request, reply) => {
+    const { id } = request.params;
+
+    if (!id) {
+      return reply.status(400).send({ error: 'Missing trend ID' });
+    }
+
+    const db = getDB();
+    const trend = await radarTrendRepository.findById(db, id);
+
+    if (!trend) {
+      return reply.status(404).send({ error: 'Trend not found' });
+    }
+
+    const updated = await radarTrendRepository.setStatus(db, id, 'alerted');
+
+    log.info({ trendId: id }, 'Trend marked as alerted');
+
+    return reply.send({ success: true, trend: formatTrend(updated) });
+  });
+
   // GET /api/admin/radar/trends — list all trends with admin status
   fastify.get('/api/admin/radar/trends', async (request, reply) => {
     const { limit = '50', offset = '0', status, category } = request.query as Record<string, string>;

@@ -7,6 +7,7 @@ import { truthCheckRepository } from '@pulo/db';
 import { TruthChecker, truthIntentDetector } from '@pulo/truth';
 import { createChildLogger } from '@pulo/observability';
 import { getProvider } from '@pulo/farcaster';
+import { createSearchProvider } from '@pulo/truth';
 import { SafetyGate, defaultConsents } from '@pulo/safety';
 
 const log = createChildLogger('truth-routes');
@@ -87,7 +88,10 @@ type TruthReportResponse = z.infer<typeof TruthReportSchema>;
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
-const truthChecker = new TruthChecker({ farcasterProvider: getProvider() });
+const truthChecker = new TruthChecker({
+  farcasterProvider: getProvider(),
+  searchProvider: createSearchProvider(),
+});
 
 export async function truthRoutes(fastify: FastifyInstance) {
 

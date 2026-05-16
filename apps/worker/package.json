@@ -11,20 +11,21 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "bullmq": "^5.40.0",
-    "ioredis": "^5.6.0",
-    "@pulo/shared": "workspace:*",
-    "@pulo/observability": "workspace:*",
     "@pulo/agent-core": "workspace:*",
-    "@pulo/radar": "workspace:*",
-    "@pulo/truth": "workspace:*",
-    "@pulo/safety": "workspace:*",
-    "@pulo/farcaster": "workspace:*",
-    "@pulo/notifications": "workspace:*",
-    "@pulo/llm": "workspace:*",
     "@pulo/db": "workspace:*",
-    "zod": "^3.24.2",
-    "pino": "^9.6.0"
+    "@pulo/farcaster": "workspace:*",
+    "@pulo/llm": "workspace:*",
+    "@pulo/notifications": "workspace:*",
+    "@pulo/observability": "workspace:*",
+    "@pulo/radar": "workspace:*",
+    "@pulo/safety": "workspace:*",
+    "@pulo/shared": "workspace:*",
+    "@pulo/truth": "workspace:*",
+    "bullmq": "^5.40.0",
+    "fastify": "^5.2.1",
+    "ioredis": "^5.6.0",
+    "pino": "^9.6.0",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "tsx": "^4.19.3",

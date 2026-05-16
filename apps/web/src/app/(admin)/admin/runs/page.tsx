@@ -1,24 +1,58 @@
 'use client';
 
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { DataTable, Pagination } from '@/components/ui/data-table';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { DataTable } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/state';
-import { mockAgentRuns } from '@/lib/mock-data';
 import { formatRelativeTime } from '@/lib/utils';
 import { CheckCircle, XCircle, Clock, AlertCircle, RefreshCw } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
+interface AgentRun {
+  id: string;
+  status: 'running' | 'completed' | 'failed' | 'timeout';
+  agentType: string;
+  input: string;
+  output?: string;
+  duration?: number;
+  startedAt: string;
+  completedAt?: string;
+  error?: string;
+}
 
 export default function RunsPage() {
-  const runs = mockAgentRuns;
-  const [page, setPage] = useState(1);
+  const [runs, setRuns] = useState<AgentRun[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadRuns = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch('/api/admin/agent-runs?limit=50', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json() as { data: Array<{ id: string; type: string; status: string; createdAt: string; payload?: Record<string, unknown> }> };
+          // Map event records to AgentRun shape
+          setRuns(data.data.map(e => ({
+            id: e.id,
+            status: (e.status as AgentRun['status']) || 'completed',
+            agentType: String(e.type || 'unknown'),
+            input: JSON.stringify(e.payload || {}).slice(0, 100),
+            startedAt: e.createdAt,
+          })));
+        }
+      } catch (e) {
+        console.error('Failed to load runs', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadRuns();
+  }, []);
 
   const columns = [
     {
       key: 'status',
       header: 'Status',
-      render: (item: typeof runs[0]) => {
+      render: (item: AgentRun) => {
         const icons = { running: Clock, completed: CheckCircle, failed: XCircle, timeout: AlertCircle };
         const Icon = icons[item.status as keyof typeof icons] || Clock;
         const colors = {
@@ -33,22 +67,22 @@ export default function RunsPage() {
     {
       key: 'agentType',
       header: 'Agent',
-      render: (item: typeof runs[0]) => <span className="capitalize">{item.agentType}</span>,
+      render: (item: AgentRun) => <span className="capitalize">{item.agentType}</span>,
     },
     {
       key: 'input',
       header: 'Input',
-      render: (item: typeof runs[0]) => <span className="truncate max-w-xs">{item.input}</span>,
+      render: (item: AgentRun) => <span className="truncate max-w-xs">{item.input}</span>,
     },
     {
       key: 'duration',
       header: 'Duration',
-      render: (item: typeof runs[0]) => item.duration ? `${item.duration}ms` : '-',
+      render: (item: AgentRun) => item.duration ? `${item.duration}ms` : '-',
     },
     {
       key: 'startedAt',
       header: 'Started',
-      render: (item: typeof runs[0]) => formatRelativeTime(item.startedAt),
+      render: (item: AgentRun) => formatRelativeTime(item.startedAt),
     },
   ];
 

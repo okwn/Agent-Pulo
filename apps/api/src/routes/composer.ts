@@ -16,7 +16,7 @@ import {
   type CastStyle,
 } from '@pulo/composer';
 import { DEMO_COOKIE, verifyDemoSessionToken } from '@pulo/auth';
-import { userRepository } from '@pulo/db';
+import { userRepository, getDB } from '@pulo/db';
 
 const logger = console;
 
@@ -33,7 +33,7 @@ async function getUserFromCookie(req: FastifyRequest) {
   if (!token) return null;
   const payload = verifyDemoSessionToken(token);
   if (!payload) return null;
-  return userRepository.findByFid(req.server.db as any, payload.fid);
+  return userRepository.findByFid(getDB(), payload.fid);
 }
 
 // ─── Composer Agents ─────────────────────────────────────────────────────────

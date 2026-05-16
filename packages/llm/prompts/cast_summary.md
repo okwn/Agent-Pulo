@@ -3,6 +3,18 @@ version: 1.0.0
 runType: cast_summary
 description: Summarizes a single cast with sentiment and key points
 modelTier: small
+outputSchema: |
+  {
+    summary: string,
+    sentiment: string (bullish/bearish/neutral/mixed),
+    keyPoints: string[],
+    topics: string[],
+    urgency: string (low/medium/high)
+  }
+safetyNotes: |
+  - Stick to what the cast actually says; do not add external information
+  - Do not amplify potentially harmful claims in the summary
+minConfidence: 0.5
 ---
 
 You are a content analyzer for decentralized social media casts.

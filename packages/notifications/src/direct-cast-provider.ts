@@ -6,17 +6,32 @@ import type { Alert, IAlertChannelProvider, DeliveryResult } from './types.js';
 
 const log = createChildLogger('direct-cast-provider');
 
+const NOTIFICATION_MODE = (process.env.PULO_NOTIFICATION_MODE ?? 'mock') as 'mock' | 'live';
+
 export class DirectCastProvider implements IAlertChannelProvider {
   name = 'direct_cast' as const;
 
   /**
    * Send a direct cast (DM) via IFarcasterProvider write interface.
+   * Only calls live provider when PULO_NOTIFICATION_MODE=live.
+   * In mock mode, returns a mock success without calling the farcaster API.
    */
   async send(alert: Alert, idempotencyKey: string): Promise<DeliveryResult> {
+    if (NOTIFICATION_MODE === 'mock') {
+      log.debug({ alertId: alert.id, idempotencyKey }, 'direct_cast: mock mode, skipping live call');
+      return { channel: 'direct_cast', success: true, deliveredAt: new Date() };
+    }
+
     try {
       const provider = getProvider();
+      const notifications = provider.notifications;
 
-      await provider.notifications.sendDirectCast(
+      if (!notifications) {
+        log.error({ alertId: alert.id }, 'direct_cast: no notifications interface on provider');
+        return { channel: 'direct_cast', success: false, errorCode: 'NO_NOTIFICATIONS_INTERFACE', deliveredAt: new Date() };
+      }
+
+      await notifications.sendDirectCast(
         alert.userId,
         { message: alert.body },
         idempotencyKey

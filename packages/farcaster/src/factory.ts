@@ -2,7 +2,7 @@
 
 import type { IFarcasterProvider } from './providers/interfaces.js';
 import { MockFarcasterProvider, NeynarFarcasterProvider, type NeynarProviderConfig } from './providers/index.js';
-import { MissingCredentialsError, ModeMismatchError } from './errors.js';
+import { ApiKeyMissingError, SignerMissingError, ModeMismatchError } from './errors.js';
 
 export type FarMode = 'mock' | 'live';
 
@@ -29,14 +29,19 @@ export function getProvider(): IFarcasterProvider {
   // Live mode — require Neynar config
   const apiKey = process.env.NEYNAR_API_KEY ?? '';
   if (!apiKey || apiKey.startsWith('PLACEHOLDER') || apiKey === 'undefined') {
-    throw new MissingCredentialsError('Neynar', 'NEYNAR_API_KEY');
+    throw new ApiKeyMissingError();
+  }
+
+  const signerUuid = process.env.FARCASTER_BOT_SIGNER_UUID ?? '';
+  if (!signerUuid || signerUuid.startsWith('PLACEHOLDER') || signerUuid === 'undefined') {
+    throw new SignerMissingError();
   }
 
   const config: NeynarProviderConfig = {
     apiKey,
     clientId: process.env.NEYNAR_CLIENT_ID,
     webhookSecret: process.env.NEYNAR_WEBHOOK_SECRET,
-    signerUuid: process.env.FARCASTER_BOT_SIGNER_UUID,
+    signerUuid,
   };
 
   const provider = new NeynarFarcasterProvider(config);
@@ -63,3 +68,12 @@ export function requireMockProvider(): IFarcasterProvider {
   }
   return p;
 }
+
+// ─── Mock control helpers (only valid in mock mode) ───────────────────────────
+
+export {
+  setMockRateLimit,
+  getMockRateLimitConfig,
+  resetMockRateLimit,
+  type MockRateLimitConfig,
+} from './providers/mock.js';

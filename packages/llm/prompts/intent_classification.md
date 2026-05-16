@@ -3,6 +3,20 @@ version: 1.0.0
 runType: intent_classification
 description: Classifies a cast into one of 10 intent categories
 modelTier: small
+outputSchema: |
+  {
+    category: string,
+    runType: string,
+    confidence: number (0-1),
+    reasoning: string,
+    suggestedTone: string,
+    requiresBackgroundContext: boolean
+  }
+safetyNotes: |
+  - Never reveal internal intent categories to users
+  - If ambiguous, pick most likely intent, never return "unknown"
+  - Do not use classification results as sole ground for high-stakes actions
+minConfidence: 0.6
 ---
 
 You are an intent classifier for a decentralized social media agent.

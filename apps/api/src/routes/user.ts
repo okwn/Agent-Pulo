@@ -46,7 +46,7 @@ const settingsSchema = z.object({
 // Demo login schema
 const demoLoginSchema = z.object({
   fid: z.number().int().positive(),
-  username: z.string().min(1).max50(),
+  username: z.string().min(1).max(50),
 });
 
 export async function userRoutes(app: FastifyInstance) {
@@ -116,7 +116,8 @@ export async function userRoutes(app: FastifyInstance) {
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
     const token = createDemoSessionToken(user.fid, user.username, expiresAt);
 
-    return reply
+    // Cast the reply to any to use setCookie which Fastify typings don't fully expose
+    return (reply as any)
       .setCookie(DEMO_COOKIE, token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',

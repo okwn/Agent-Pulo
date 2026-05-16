@@ -16,8 +16,8 @@ async function seed() {
   const users = [
     { fid: 1, username: 'alice', displayName: 'Alice Chen', custodyAddress: '0x1234...alice', plan: 'pro' as const, verifiedAddresses: ['0xabcd...alice'] },
     { fid: 2, username: 'bob', displayName: 'Bob Martinez', custodyAddress: '0x5678...bob', plan: 'free' as const },
-    { fid: 3, username: 'carol', displayName: 'Carol Johnson', custodyAddress: '0x9abc...carol', plan: 'team' as const },
-    { fid: 1234, username: 'pulo_bot', displayName: 'PULO Agent', custodyAddress: '0xdef0...pulo', plan: 'team' as const },
+    { fid: 3, username: 'carol', displayName: 'Carol Johnson', custodyAddress: '0x9abc...carol', plan: 'creator' as const },
+    { fid: 1234, username: 'pulo_bot', displayName: 'PULO Agent', custodyAddress: '0xdef0...pulo', plan: 'creator' as const },
   ];
 
   for (const u of users) {
@@ -135,17 +135,32 @@ async function seed() {
   }
   console.log(`  ✓ ${trendsData.length} trends seeded`);
 
-  // ─── Demo Alert Deliveries ───────────────────────────────────────────────────
-  const alerts = [
-    { userId: 1, channel: 'dm' as const, status: 'sent' as const, idempotencyKey: 'alert-degen-001' },
-    { userId: 3, channel: 'cast_reply' as const, status: 'pending' as const, idempotencyKey: 'alert-lens-001' },
+  // ─── Demo Alerts ───────────────────────────────────────────────────────────────
+  const alertIds = [];
+  const alertsData = [
+    { userId: 1, type: 'trend_detected' as const, title: '$DEGEN Airdrop Alert', body: 'High activity around $DEGEN token airdrop claiming.', riskLevel: 'medium' as const },
+    { userId: 3, type: 'grant' as const, title: 'Lens Grant Program', body: 'Lens Protocol grant program is now open.', riskLevel: 'low' as const },
   ];
 
-  for (const a of alerts) {
-    await sql`INSERT INTO alert_deliveries (user_id, channel, status, idempotency_key)
-      VALUES (${a.userId}, ${a.channel}, ${a.status}, ${a.idempotencyKey})`;
+  for (const a of alertsData) {
+    const result = await sql`INSERT INTO alerts (user_id, type, title, body, risk_level)
+      VALUES (${a.userId}, ${a.type}, ${a.title}, ${a.body}, ${a.riskLevel})
+      RETURNING id`;
+    alertIds.push(result[0]!.id);
   }
-  console.log(`  ✓ ${alerts.length} alert deliveries seeded`);
+  console.log(`  ✓ ${alertsData.length} alerts seeded`);
+
+  // ─── Demo Alert Deliveries ───────────────────────────────────────────────────
+  const deliveries = [
+    { alertId: alertIds[0], userId: 1, channel: 'dm' as const, status: 'sent' as const, idempotencyKey: 'alert-degen-001' },
+    { alertId: alertIds[1], userId: 3, channel: 'cast_reply' as const, status: 'pending' as const, idempotencyKey: 'alert-lens-001' },
+  ];
+
+  for (const a of deliveries) {
+    await sql`INSERT INTO alert_deliveries (alert_id, user_id, channel, status, idempotency_key)
+      VALUES (${a.alertId}, ${a.userId}, ${a.channel}, ${a.status}, ${a.idempotencyKey})`;
+  }
+  console.log(`  ✓ ${deliveries.length} alert deliveries seeded`);
 
   console.log('\nSeed complete. Run migrations first if tables do not exist.');
   console.log('  PGPASSWORD=password psql -h localhost -p 5544 -U postgres -d pulo -f migrations/0000_init_pulo_schema.sql');

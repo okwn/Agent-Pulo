@@ -17,8 +17,9 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
-    "@pulo/shared": "workspace:*",
     "@pulo/observability": "workspace:*",
+    "@pulo/shared": "workspace:*",
+    "ioredis": "^5.10.1",
     "openai": "^4.87.3",
     "zod": "^3.24.2"
   },

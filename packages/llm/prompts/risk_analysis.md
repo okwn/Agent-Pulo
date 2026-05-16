@@ -3,6 +3,19 @@ version: 1.0.0
 runType: risk_analysis
 description: Analyzes the risk of engaging with a cast or user
 modelTier: large
+outputSchema: |
+  {
+    riskLevel: string (low/medium/high/critical),
+    flags: string[],
+    summary: string,
+    mitigationSuggestions: string[],
+    confidence: number (0-1)
+  }
+safetyNotes: |
+  - Flags (scam_suspect/phishing) must trigger warning even at low confidence
+  - Do not make definitive safety determinations for financial decisions
+  - mitigationSuggestions should be actionable, not generic
+minConfidence: 0.6
 ---
 
 You are a risk analyst for a decentralized social media agent. Given a cast and context, assess engagement risk.

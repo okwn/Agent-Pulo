@@ -18,7 +18,7 @@ import {
 
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
-export const planEnum = pgEnum('plan', ['free', 'pro', 'team']);
+export const planEnum = pgEnum('plan', ['free', 'pro', 'creator', 'community', 'admin']);
 export const userStatusEnum = pgEnum('user_status', ['active', 'suspended', 'deactivated']);
 export const eventSourceEnum = pgEnum('event_source', ['webhook', 'worker', 'api', 'scheduler']);
 export const eventTypeEnum = pgEnum('event_type', ['mention', 'reply', 'dm', 'trend_detected', 'truth_check_request', 'alert_triggered', 'auto_reply']);
@@ -30,14 +30,14 @@ export const riskLevelEnum = pgEnum('risk_level', ['low', 'medium', 'high', 'cri
 export const trendCategoryEnum = pgEnum('trend_category', ['airdrop', 'grant', 'reward', 'token', 'program', 'governance', 'social']);
 export const trendStatusEnum = pgEnum('trend_status', ['active', 'fading', 'confirmed', 'debunked']);
 export const radarTrendStatusEnum = pgEnum('radar_trend_status', ['detected', 'watching', 'approved', 'rejected', 'alerted', 'archived']);
-export const radarCategoryEnum = pgEnum('radar_category', ['claim', 'reward_program', 'token_launch', 'airdrop', 'grant', 'hackathon', 'scam_warning', 'social_trend', 'unknown']);
+export const radarCategoryEnum = pgEnum('radar_category', ['claim', 'airdrop', 'reward_program', 'token_launch', 'grant', 'hackathon', 'scam_warning', 'social_trend', 'farcaster_meta', 'miniapp_opportunity', 'unknown']);
 export const deliveryStatusEnum = pgEnum('delivery_status', ['pending', 'sent', 'delivered', 'opened', 'failed']);
 export const deliveryChannelEnum = pgEnum('delivery_channel', ['dm', 'cast_reply', 'miniapp', 'email', 'webhook']);
 export const alertTypeEnum = pgEnum('alert_type', ['trend_detected', 'claim_detected', 'reward_program', 'token_launch', 'grant', 'scam_warning', 'truth_check_ready', 'weekly_digest', 'admin_message']);
 export const severityEnum = pgEnum('severity', ['low', 'medium', 'high', 'critical']);
 export const subscriptionProviderEnum = pgEnum('subscription_provider', ['manual', 'stripe', 'paddle', 'lemon_squeezy']);
 export const subscriptionStatusEnum = pgEnum('subscription_status', ['active', 'past_due', 'canceled', 'expired']);
-export const subscriptionTierEnum = pgEnum('subscription_tier', ['free', 'pro', 'team', 'enterprise']);
+export const subscriptionTierEnum = pgEnum('subscription_tier', ['free', 'pro', 'creator', 'community', 'admin']);
 
 // ─── Tables ───────────────────────────────────────────────────────────────────
 
@@ -151,7 +151,9 @@ export const agentRuns = pgTable('agent_runs', {
   eventId: uuid('event_id').references(() => agentEvents.id, { onDelete: 'set null' }),
   userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }),
   runType: text('run_type').notNull(), // reply, truth_check, trend_analysis, summarize
+  provider: text('provider'), // openai | anthropic | mock | auto
   model: text('model').notNull(),
+  promptVersion: text('prompt_version'), // e.g. "1.0.0"
   inputTokens: integer('input_tokens'),
   outputTokens: integer('output_tokens'),
   costEstimate: text('cost_estimate'),
@@ -159,6 +161,7 @@ export const agentRuns = pgTable('agent_runs', {
   decision: text('decision'),
   output: jsonb('output').$type<Record<string, unknown>>().default({}),
   errorCode: text('error_code'),
+  fallbackHistory: jsonb('fallback_history').$type<Array<{attemptedProvider: string; attemptedModel: string; errorCode: string; errorMessage: string; recovered: boolean}>>().default([]),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => [
   index('agent_runs_event_id_idx').on(table.eventId),
@@ -391,6 +394,24 @@ export const safetyFlags = pgTable('safety_flags', {
   index('safety_flags_severity_idx').on(table.severity),
 ]);
 
+export const usageActionEnum = pgEnum('usage_action', [
+  'mention_analysis', 'reply_suggestion', 'radar_alert', 'truth_check',
+  'direct_cast_attempt', 'llm_token_usage',
+]);
+
+export const userUsage = pgTable('user_usage', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  action: usageActionEnum('action').notNull(),
+  count: integer('count').default(0).notNull(),
+  periodStart: timestamp('period_start').defaultNow().notNull(),
+  periodEnd: timestamp('period_end').notNull(),
+  lastResetAt: timestamp('last_reset_at').defaultNow().notNull(),
+}, (table) => [
+  index('user_usage_user_action_idx').on(table.userId, table.action),
+  index('user_usage_period_idx').on(table.periodStart),
+]);
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type User = typeof users.$inferSelect;
@@ -433,4 +454,6 @@ export type RadarWatchedChannel = typeof radarWatchedChannels.$inferSelect;
 export type NewRadarWatchedChannel = typeof radarWatchedChannels.$inferInsert;
 export type Alert = typeof alerts.$inferSelect;
 export type NewAlert = typeof alerts.$inferInsert;
+export type UserUsage = typeof userUsage.$inferSelect;
+export type NewUserUsage = typeof userUsage.$inferInsert;
 export type SubscriptionTier = 'free' | 'pro' | 'team' | 'enterprise';

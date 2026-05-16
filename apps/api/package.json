@@ -10,21 +10,22 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "fastify": "^5.2.1",
     "@fastify/cors": "^10.0.2",
-    "@pulo/shared": "workspace:*",
-    "@pulo/observability": "workspace:*",
-    "@pulo/farcaster": "workspace:*",
-    "@pulo/safety": "workspace:*",
-    "@pulo/db": "workspace:*",
-    "@pulo/truth": "workspace:*",
-    "@pulo/radar": "workspace:*",
     "@pulo/auth": "workspace:*",
     "@pulo/billing": "workspace:*",
     "@pulo/composer": "workspace:*",
+    "@pulo/db": "workspace:*",
     "@pulo/errors": "workspace:*",
-    "zod": "^3.24.2",
-    "pino": "^9.6.0"
+    "@pulo/farcaster": "workspace:*",
+    "@pulo/observability": "workspace:*",
+    "@pulo/radar": "workspace:*",
+    "@pulo/safety": "workspace:*",
+    "@pulo/shared": "workspace:*",
+    "@pulo/truth": "workspace:*",
+    "fastify": "^5.2.1",
+    "ioredis": "^5.6.0",
+    "pino": "^9.6.0",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@types/node": "^22.13.10",

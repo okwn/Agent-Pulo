@@ -2,13 +2,15 @@
 
 export type RadarCategory =
   | 'claim'
+  | 'airdrop'
   | 'reward_program'
   | 'token_launch'
-  | 'airdrop'
   | 'grant'
   | 'hackathon'
   | 'scam_warning'
   | 'social_trend'
+  | 'farcaster_meta'
+  | 'miniapp_opportunity'
   | 'unknown';
 
 export type RadarRiskLevel = 'low' | 'medium' | 'high' | 'unknown';
@@ -16,7 +18,8 @@ export type RadarRiskLevel = 'low' | 'medium' | 'high' | 'unknown';
 export type RadarAdminStatus = 'detected' | 'watching' | 'approved' | 'rejected' | 'alerted' | 'archived';
 
 export const RADAR_CATEGORIES: RadarCategory[] = [
-  'claim', 'reward_program', 'token_launch', 'airdrop', 'grant', 'hackathon', 'scam_warning', 'social_trend', 'unknown',
+  'claim', 'airdrop', 'reward_program', 'token_launch', 'grant', 'hackathon',
+  'scam_warning', 'social_trend', 'farcaster_meta', 'miniapp_opportunity', 'unknown',
 ];
 
 export const RADAR_ADMIN_STATUSES: RadarAdminStatus[] = [
@@ -35,6 +38,9 @@ export const DEFAULT_WATCHED_CHANNELS = [
   { channelId: 'crypto', name: 'Crypto' },
   { channelId: 'airdrop', name: 'Airdrop' },
   { channelId: 'token', name: 'Token' },
+  { channelId: 'degen', name: 'Degen' },
+  { channelId: 'zora', name: 'Zora' },
+  { channelId: 'ai', name: 'AI' },
 ];
 
 // ─── Default keywords ─────────────────────────────────────────────────────────
@@ -43,10 +49,12 @@ export const DEFAULT_KEYWORDS = {
   en: [
     'claim', 'airdrop', 'reward', 'rewards', 'eligibility', 'allocation',
     'snapshot', 'points', 'season', 'quest', 'mint', 'allowlist',
-    'token', 'drop', 'grant', 'builder program', 'retro funding',
+    'token', 'drop', 'grant', 'builder program', 'retro funding', 'mini app rewards',
+    'scam', 'phishing', 'fake',
   ],
   tr: [
     'ödül', 'uygunluk', 'puan', 'görev', 'kampanya', 'başvuru', 'hibe',
+    'dolandırıcılık', 'sahte', 'kimlik avı',
   ],
 };
 
@@ -97,7 +105,7 @@ export interface TrendScoreBreakdown {
   trusted_author_score: number;
   engagement_score: number;
   channel_relevance_score: number;
-  onchain_or_official_confirmation_score: number;
+  official_confirmation_score: number;
   spam_score: number;
   scam_risk_score: number;
   total: number;
@@ -126,12 +134,14 @@ export const CHANNEL_RELEVANCE: Record<string, number> = {
 
 export const CATEGORY_KEYWORDS: Record<RadarCategory, string[]> = {
   claim: ['claim', 'claiming', 'eligibility', 'eligible', 'allocation', 'qualify'],
-  reward_program: ['reward', 'rewards', 'points', 'season', 'quest', 'program'],
-  token_launch: ['token', 'launch', 'mint', 'allowlist', 'presale', 'ICO', 'IDO', 'TGE'],
   airdrop: ['airdrop', 'snapshot', 'drop', 'free token', '分配'],
+  reward_program: ['reward', 'rewards', 'points', 'season', 'quest', 'program', 'ödül', 'puan', 'görev', 'kampanya'],
+  token_launch: ['token', 'launch', 'mint', 'allowlist', 'presale', 'ICO', 'IDO', 'TGE'],
   grant: ['grant', 'funding', 'RFP', 'proposal', 'builder program', 'retro funding', 'hibe', 'başvuru'],
   hackathon: ['hackathon', 'bounty', 'contest', 'prize'],
-  scam_warning: ['scam', 'fake', 'phishing', 'warning', '⚠️', '警惕'],
+  scam_warning: ['scam', 'fake', 'phishing', 'warning', '⚠️', '警惕', 'dolandırıcılık', 'sahte', 'kimlik avı'],
   social_trend: ['trending', 'viral', 'exploding', 'going crazy'],
+  farcaster_meta: ['farcaster', 'frame', 'cast', 'warpscast', 'protocol'],
+  miniapp_opportunity: ['mini app', 'miniapp', 'frame', 'app', 'build', 'opportunity'],
   unknown: [],
 };

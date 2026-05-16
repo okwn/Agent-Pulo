@@ -20,11 +20,13 @@ import { ScamSignalDetector, scamSignalDetector } from './scam-signal-detector.j
 import { TruthVerdictEngine, truthVerdictEngine } from './verdict-engine.js';
 import { TruthReportFormatter, truthReportFormatter } from './report-formatter.js';
 import { TruthIntentDetector, truthIntentDetector } from './intent-detector.js';
+import type { WebSearchProvider } from './search-provider.js';
 
 const log = createChildLogger('truth-checker');
 
 export interface TruthCheckerConfig {
   farcasterProvider?: IFarcasterProvider;
+  searchProvider?: WebSearchProvider;
   claimExtractor?: ClaimExtractor;
   evidenceCollector?: EvidenceCollector;
   replyAnalyzer?: ReplyCommentAnalyzer;
@@ -49,7 +51,7 @@ export class TruthChecker {
   constructor(config: TruthCheckerConfig = {}) {
     this.farcasterProvider = config.farcasterProvider;
     this.claimExtractor = config.claimExtractor ?? claimExtractor;
-    this.evidenceCollector = config.evidenceCollector ?? createEvidenceCollector(config.farcasterProvider);
+    this.evidenceCollector = config.evidenceCollector ?? createEvidenceCollector(config.farcasterProvider, config.searchProvider);
     this.replyAnalyzer = config.replyAnalyzer ?? replyCommentAnalyzer;
     this.sourceScorer = config.sourceScorer ?? sourceTrustScorer;
     this.contradictionDetector = config.contradictionDetector ?? contradictionDetector;
@@ -113,7 +115,8 @@ export class TruthChecker {
     });
 
     // 10. Build short answer
-    const shortAnswer = this.buildShortAnswer(verdict, confidence, claim);
+    const queryLanguage = truthIntentDetector.detect(this.extractCastText(event)).queryLanguage ?? 'en';
+    const shortAnswer = this.buildShortAnswer(verdict, confidence, claim, queryLanguage);
 
     // 11. Build evidence summary
     const evidenceSummary = this.buildEvidenceSummary(markedEvidence, contradictionResult);
@@ -144,8 +147,8 @@ export class TruthChecker {
       processingTimeMs,
     };
 
-    // 13. Format full report with public reply
-    const report = this.reportFormatter.format(reportBase, verdict, confidence);
+    // 13. Format full report with public reply (bilingual)
+    const report = this.reportFormatter.format(reportBase, verdict, confidence, queryLanguage);
 
     log.info({
       targetCastHash,
@@ -233,28 +236,24 @@ export class TruthChecker {
     });
   }
 
-  private buildShortAnswer(verdict: Verdict, confidence: number, claim: { claim: string; category: string }): string {
+  private buildShortAnswer(verdict: Verdict, confidence: number, claim: { claim: string; category: string }, lang: 'en' | 'tr' | 'unknown'): string {
+    if (lang === 'tr') {
+      switch (verdict) {
+        case 'likely_true': return 'Bu iddia mevcut kanıtlara göre doğru görünüyor.';
+        case 'likely_false': return 'Bu iddia mevcut kanıtlara göre yanlış veya yanıltıcı.';
+        case 'mixed': return 'Kanıtlar karışık — bazı kaynaklar destekliyor, diğerleri çelişiyor.';
+        case 'unverified': return 'İnsanların tartıştığını buldum ancak resmi kaynaklardan doğrulama yok.';
+        case 'scam_risk': return 'Bu içerik dolandırıcılık belirtileri gösteriyor. Etkileşime girmeyin.';
+        case 'insufficient_context': return 'Bu iddiayı doğrulamak için yeterli bilgi yok.';
+      }
+    }
     switch (verdict) {
-      case 'likely_true':
-        return `This claim appears to be accurate based on available evidence.`;
-
-      case 'likely_false':
-        return `This claim appears to be inaccurate or misleading based on available evidence.`;
-
-      case 'mixed':
-        return `Evidence is mixed — some sources support this claim, others contradict it.`;
-
-      case 'unverified':
-        return `I found people discussing this, but there is no clear confirmation from official sources yet.`;
-
-      case 'scam_risk':
-        return `This content shows signs of a scam. Do NOT engage or share.`;
-
-      case 'insufficient_context':
-        return `Not enough information is available to verify this claim.`;
-
-      default:
-        return `This claim could not be verified.`;
+      case 'likely_true': return `This claim appears to be accurate based on available evidence.`;
+      case 'likely_false': return `This claim appears to be inaccurate or misleading based on available evidence.`;
+      case 'mixed': return `Evidence is mixed — some sources support this claim, others contradict it.`;
+      case 'unverified': return `I found people discussing this, but there is no clear confirmation from official sources yet.`;
+      case 'scam_risk': return `This content shows signs of a scam. Do NOT engage or share.`;
+      case 'insufficient_context': return `Not enough information is available to verify this claim.`;
     }
   }
 

@@ -3,6 +3,20 @@ version: 1.0.0
 runType: truth_check_claim_extraction
 description: Extracts verifiable claims from a cast for fact-checking
 modelTier: small
+outputSchema: |
+  {
+    claim: string,
+    claimCategory: string (factual/opinion/prediction/unstated),
+    urgency: string (low/medium/high),
+    contextNeeded: string[],
+    confidence: number (0-1),
+    additionalClaims: string[]
+  }
+safetyNotes: |
+  - Focus on specific, testable factual claims (prices, dates, percentages, names, technical claims)
+  - Avoid extracting opinions or subjective statements as verifiable claims
+  - Do not speculate beyond what the cast explicitly states
+minConfidence: 0.5
 ---
 
 You are a claim extractor for fact-checking. Given a cast, extract all testable factual claims.

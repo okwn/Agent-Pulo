@@ -24,6 +24,7 @@ export const VERDICTS: Verdict[] = [
 // ─── Evidence Categories ──────────────────────────────────────────────────────
 
 export interface EvidenceItem {
+  type: 'cast' | 'web';
   castHash: string;
   authorFid: number;
   authorUsername?: string;
@@ -32,6 +33,9 @@ export interface EvidenceItem {
   isOfficialSource?: boolean;
   isHighTrustUser?: boolean;
   timestamp?: string;
+  // web-only fields
+  url?: string;
+  source?: string;
 }
 
 export interface EvidenceSummary {
@@ -177,7 +181,17 @@ export const TRUTH_CHECK_PATTERNS = {
 
 export const MAX_PUBLIC_REPLY_LENGTH = 320;
 
-export function formatVerdictLabel(verdict: Verdict): string {
+export function formatVerdictLabel(verdict: Verdict, lang: 'en' | 'tr' | 'unknown' = 'en'): string {
+  if (lang === 'tr') {
+    switch (verdict) {
+      case 'likely_true': return 'Pulo kontrol: Büyük ihtimalle doğru';
+      case 'likely_false': return 'Pulo kontrol: Büyük ihtimalle yanlış';
+      case 'mixed': return 'Pulo kontrol: Karma';
+      case 'unverified': return 'Pulo kontrol: Doğrulanmamış';
+      case 'scam_risk': return 'Pulo kontrol: Dolandırıcılık riski';
+      case 'insufficient_context': return 'Pulo kontrol: Yetersiz bağlam';
+    }
+  }
   switch (verdict) {
     case 'likely_true': return 'Pulo check: Likely true';
     case 'likely_false': return 'Pulo check: Likely false';

@@ -104,6 +104,7 @@ export interface AppErrorOptions {
 }
 
 export class AppError extends Error {
+  public override readonly name: string;
   public readonly code: ErrorCode;
   public readonly category: ErrorCategory;
   public readonly retryable: boolean;
@@ -112,7 +113,7 @@ export class AppError extends Error {
   public readonly jobId: string | null;
   public readonly metadata: Record<string, unknown>;
   public readonly timestamp: Date;
-  public readonly cause: unknown;
+  public override readonly cause: unknown;
 
   constructor(options: AppErrorOptions) {
     super(options.message, { cause: options.cause });
@@ -215,6 +216,10 @@ export class AppError extends Error {
       metadata: this.metadata,
       timestamp: this.timestamp.toISOString(),
       cause: this.cause instanceof Error ? this.cause.message : String(this.cause),
+      status: this.retryable ? 'pending' : 'dead_lettered',
+      lastRetryAt: null,
+      nextRetryAt: this.retryable ? new Date(Date.now() + this.getRetryDelay()).toISOString() : null,
+      resolvedAt: null,
     };
   }
 }
@@ -271,7 +276,7 @@ export interface ErrorFilter {
 
 export class InMemoryErrorStore implements ErrorStore {
   private errors = new Map<string, AppErrorRecord>();
-  private indices = new Map<string, Set<string>>();
+  private indices = new Map<string, Map<string, Set<string>>>();
 
   async save(error: AppError): Promise<string> {
     const record: AppErrorRecord = {
@@ -354,11 +359,17 @@ export class InMemoryErrorStore implements ErrorStore {
   }
 
   private addToIndex(key: string, value: string, id: string): void {
-    const keyIndex = this.indices.get(key) ?? new Map();
-    const set = keyIndex.get(value) ?? new Set();
+    let keyIndex = this.indices.get(key);
+    if (!keyIndex) {
+      keyIndex = new Map<string, Set<string>>();
+      this.indices.set(key, keyIndex);
+    }
+    let set = keyIndex.get(value);
+    if (!set) {
+      set = new Set<string>();
+      keyIndex.set(value, set);
+    }
     set.add(id);
-    keyIndex.set(key, set);
-    this.indices.set(key, keyIndex);
   }
 }
 
@@ -420,7 +431,7 @@ export class InMemoryRetryQueue implements RetryQueue {
 
     if (pending.length === 0) return null;
 
-    const job = pending[0];
+    const job: JobRecord = pending[0]!;
     job.status = 'running';
     job.updatedAt = new Date();
     this.jobs.set(job.id, job);
@@ -508,7 +519,7 @@ export class DeadLetterQueue {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────────
 
-function generateCorrelationId(): string {
+export function generateCorrelationId(): string {
   return `corr_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 

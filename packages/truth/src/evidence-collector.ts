@@ -3,11 +3,15 @@
 import { createChildLogger } from '@pulo/observability';
 import type { EvidenceItem, ExtractedClaim, TruthCheckContext } from './types.js';
 import type { IFarcasterProvider } from '@pulo/farcaster';
+import type { WebSearchProvider } from './search-provider.js';
 
 const log = createChildLogger('evidence-collector');
 
 export class EvidenceCollector {
-  constructor(private farcasterProvider?: IFarcasterProvider) {}
+  constructor(
+    private farcasterProvider?: IFarcasterProvider,
+    private searchProvider?: WebSearchProvider,
+  ) {}
 
   /**
    * Collect evidence by searching for related casts using claim keywords.
@@ -65,6 +69,27 @@ export class EvidenceCollector {
       }
     }
 
+    // 4. Web search (if search provider available)
+    if (this.searchProvider) {
+      try {
+        const webResults = await this.searchProvider.search(claim.claim);
+        for (const result of webResults) {
+          evidence.push({
+            type: 'web',
+            castHash: result.url,
+            authorFid: 0,
+            text: result.snippet,
+            sentiment: 'neutral',
+            timestamp: result.publishedAt,
+            url: result.url,
+            source: result.source,
+          });
+        }
+      } catch (err) {
+        log.debug({ err }, 'Web search failed, continuing without web evidence');
+      }
+    }
+
     log.info({ evidenceCount: evidence.length }, 'Collected evidence');
     return evidence;
   }
@@ -74,6 +99,7 @@ export class EvidenceCollector {
     sentiment: EvidenceItem['sentiment']
   ): EvidenceItem {
     return {
+      type: 'cast',
       castHash: cast.hash,
       authorFid: cast.authorFid,
       authorUsername: cast.authorUsername,
@@ -126,6 +152,9 @@ export class EvidenceCollector {
   }
 }
 
-export function createEvidenceCollector(farcasterProvider?: IFarcasterProvider): EvidenceCollector {
-  return new EvidenceCollector(farcasterProvider);
+export function createEvidenceCollector(
+  farcasterProvider?: IFarcasterProvider,
+  searchProvider?: WebSearchProvider,
+): EvidenceCollector {
+  return new EvidenceCollector(farcasterProvider, searchProvider);
 }

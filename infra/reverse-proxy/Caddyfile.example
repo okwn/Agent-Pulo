@@ -1,0 +1,73 @@
+# Caddyfile.example — Reverse proxy for PULO
+# Drop as Caddyfile in /etc/caddy/ or ~/Caddyfile
+
+# ─── Global options ──────────────────────────────────────────────────────────
+{
+  email admin@example.com           # Let's Encrypt registration
+  storage file_system /data/caddy   # TLS cert storage
+}
+
+# ─── HTTP → HTTPS redirect ───────────────────────────────────────────────────
+http:// {
+  redir / https://{host}{uri}
+}
+
+# ─── Main domain ─────────────────────────────────────────────────────────────
+https://pulo.example.com {
+  reverse_proxy /api/* http://localhost:4311 {
+    # Long timeout for AI/LLM operations
+    transport http {
+      dial_timeout  10s
+      response_timeout 300s
+      keepalive_idle 60s
+    }
+  }
+
+  reverse_proxy /api/webhook/* http://localhost:4311 {
+    # Webhooks may take longer
+    transport http {
+      dial_timeout  10s
+      response_timeout 120s
+    }
+  }
+
+  reverse_proxy /* http://localhost:3100 {
+    # Web app
+    transport http {
+      dial_timeout  10s
+      response_timeout 60s
+    }
+  }
+
+  # ─── Security headers ───────────────────────────────────────────────────────
+  header / {
+    X-Frame-Options           DENY
+    X-Content-Type-Options    nosniff
+    X-XSS-Protection          "1; mode=block"
+    Referrer-Policy           strict-origin-when-cross-origin
+    Permissions-Policy        "camera=(), microphone=(), geolocation=()"
+    # Remove server header
+    -Server
+  }
+
+  # ─── Cache control for static assets ──────────────────────────────────────
+  @static {
+    file {path} *.css *.js *.svg *.png *.jpg *.woff2
+  }
+  header @static Cache-Control "public, max-age=31536000, immutable"
+
+  # ─── Compress common formats ───────────────────────────────────────────────
+  encode gzip zstd
+
+  # Logs
+  log {
+    output file /var/log/caddy/pulo.access.log
+    format json
+  }
+}
+
+# ─── Staging / dev variant ────────────────────────────────────────────────────
+# https://pulo-staging.example.com {
+#   reverse_proxy /api/* http://localhost:4312
+#   reverse_proxy /*     http://localhost:3101
+# }

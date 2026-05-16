@@ -14,5 +14,16 @@ export {
   clearProvider,
   requireLiveProvider,
   requireMockProvider,
+  setMockRateLimit,
+  getMockRateLimitConfig,
+  resetMockRateLimit,
+  type MockRateLimitConfig,
   type FarMode,
 } from './factory.js';
+
+export {
+  withIdempotencyKey,
+  makeIdempotencyKey,
+  parseIdempotencyKey,
+  isValidIdempotencyKey,
+} from './idempotency.js';

@@ -44,29 +44,77 @@ export class SignerError extends FarError {
 
 export class CastNotFoundError extends FarError {
   constructor(hash: string) {
-    super(`Cast not found: ${hash}`, 'FAR_E010', 404, false);
+    super(`Cast not found: ${hash}`, 'FARCASTER_CAST_FETCH_FAILED', 404, false);
     this.name = 'CastNotFoundError';
   }
 }
 
 export class UserNotFoundError extends FarError {
   constructor(identifier: string) {
-    super(`User not found: ${identifier}`, 'FAR_E011', 404, false);
+    super(`User not found: ${identifier}`, 'FARCASTER_USER_FETCH_FAILED', 404, false);
     this.name = 'UserNotFoundError';
   }
 }
 
 export class ChannelNotFoundError extends FarError {
   constructor(channelId: string) {
-    super(`Channel not found: ${channelId}`, 'FAR_E012', 404, false);
+    super(`Channel not found: ${channelId}`, 'FARCASTER_CHANNEL_FETCH_FAILED', 404, false);
     this.name = 'ChannelNotFoundError';
   }
 }
 
 export class RateLimitError extends FarError {
   constructor(provider: string, retryAfterMs?: number) {
-    super(`Rate limited by ${provider}${retryAfterMs ? `, retry after ${retryAfterMs}ms` : ''}`, 'FAR_E020', 429, true);
+    super(`Rate limited by ${provider}${retryAfterMs ? `, retry after ${retryAfterMs}ms` : ''}`, 'FARCASTER_RATE_LIMITED', 429, true);
     this.name = 'RateLimitError';
+  }
+}
+
+export class ApiKeyMissingError extends FarError {
+  constructor(detail?: string) {
+    super(
+      `FARCASTER_API_KEY_MISSING: NEYNAR_API_KEY is not set or is a placeholder.${detail ? ' ' + detail : ''}`,
+      'FARCASTER_API_KEY_MISSING',
+      500,
+      false
+    );
+    this.name = 'ApiKeyMissingError';
+  }
+}
+
+export class SignerMissingError extends FarError {
+  constructor(detail?: string) {
+    super(
+      `FARCASTER_SIGNER_MISSING: FARCASTER_BOT_SIGNER_UUID is not set or is a placeholder.${detail ? ' ' + detail : ''}`,
+      'FARCASTER_SIGNER_MISSING',
+      500,
+      false
+    );
+    this.name = 'SignerMissingError';
+  }
+}
+
+export class CastFetchError extends FarError {
+  constructor(hash: string, cause?: string) {
+    super(
+      `FARCASTER_CAST_FETCH_FAILED: Could not fetch cast ${hash}.${cause ? ' Cause: ' + cause : ''}`,
+      'FARCASTER_CAST_FETCH_FAILED',
+      500,
+      false
+    );
+    this.name = 'CastFetchError';
+  }
+}
+
+export class PublishFailedError extends FarError {
+  constructor(cause?: string) {
+    super(
+      `FARCASTER_PUBLISH_FAILED: Could not publish cast.${cause ? ' Cause: ' + cause : ''}`,
+      'FARCASTER_PUBLISH_FAILED',
+      500,
+      true
+    );
+    this.name = 'PublishFailedError';
   }
 }
 

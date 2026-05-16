@@ -1,7 +1,7 @@
 // pipeline/executor.ts — Action executor — runs the decided action and persists results
 
 import type { AgentDecision, ActionResult, AgentContext } from '../types.js';
-import { getProvider } from '@pulo/farcaster';
+import { getProvider, withIdempotencyKey } from '@pulo/farcaster';
 import { getDB, schema } from '@pulo/db';
 
 const { replyDrafts, truthChecks, trends, alertDeliveries } = schema;
@@ -75,16 +75,20 @@ export class ActionExecutor {
     const signerUuid = process.env.FARCASTER_BOT_SIGNER_UUID ?? '';
     const parentHash = context.event.type === 'mention' ? context.event.parentHash : null;
 
+    const idempotencyKey = `publish-reply:${runId}`;
+
     try {
-      let result;
-      if (parentHash) {
-        result = await provider.write.publishReply(parentHash, text, { signerUuid });
-      } else {
-        result = await provider.write.publishCast(text, {
-          signerUuid,
-          channelId: context.event.type === 'mention' && context.event.channelId ? context.event.channelId : undefined,
-        });
-      }
+      const result = await withIdempotencyKey(idempotencyKey, async () => {
+        if (parentHash) {
+          return provider.write.publishReply(parentHash, text, { signerUuid, idempotencyKey });
+        } else {
+          return provider.write.publishCast(text, {
+            signerUuid,
+            idempotencyKey,
+            channelId: context.event.type === 'mention' && context.event.channelId ? context.event.channelId : undefined,
+          });
+        }
+      });
       return { status: 'published', output: { text, castHash: result.hash }, url: result.url };
     } catch (err) {
       return { status: 'failed', output: null, error: String(err) };

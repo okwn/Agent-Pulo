@@ -1,23 +1,20 @@
 // Session middleware for API routes — extracts user from request context
 
+import type { FastifyRequest } from 'fastify';
 import type { AuthUser } from '@pulo/auth';
 
-declare module 'hono' {
-  interface ContextVariableMap {
-    user: AuthUser | null;
+declare module 'fastify' {
+  interface FastifyRequest {
+    sessionUser: AuthUser | null;
   }
 }
 
-export function getSessionUser(c: {
-  get: (key: 'user') => AuthUser | null;
-}): AuthUser | null {
-  return c.get('user');
+export function getSessionUser(req: FastifyRequest): AuthUser | null {
+  return req.sessionUser;
 }
 
-export function requireAuth(c: {
-  get: (key: 'user') => AuthUser | null;
-}): AuthUser {
-  const user = c.get('user');
+export function requireAuth(req: FastifyRequest): AuthUser {
+  const user = req.sessionUser;
   if (!user) {
     throw new Error('Unauthorized');
   }

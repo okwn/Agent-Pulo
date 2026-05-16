@@ -3,7 +3,7 @@
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
+import { Textarea } from '@/components/ui/input';
 import {
   rewriteCast,
   rewriteMultiple,
@@ -90,7 +90,7 @@ export default function ComposerPage() {
     try {
       const { variants } = await rewriteMultiple(text, ['sharp', 'founder', 'concise']);
       setVariants(variants);
-      setSelectedVariant(variants[0]);
+      setSelectedVariant(variants[0]!);
       setActiveTab('rewrite');
     } catch (e) {
       console.error('Rewrite failed', e);
@@ -437,7 +437,7 @@ export default function ComposerPage() {
                       }`}
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <Badge variant="secondary" size="sm">{variant.style}</Badge>
+                        <Badge variant="default" size="sm">{variant.style}</Badge>
                         <span className="text-xs text-[--color-pulo-muted]">Score: {variant.score}/10</span>
                       </div>
                       <p className="text-sm text-[--color-pulo-text]">{variant.text}</p>
@@ -476,7 +476,7 @@ export default function ComposerPage() {
                       }`}
                     >
                       <div className="flex items-center gap-2 mb-2">
-                        <Badge variant={post.isHook ? 'accent' : 'secondary'} size="sm">
+                        <Badge variant={post.isHook ? 'accent' : 'default'} size="sm">
                           {post.isHook ? 'Hook' : `Post ${post.index + 1}`}
                         </Badge>
                         <span className="text-xs text-[--color-pulo-muted]">{post.text.length} chars</span>
@@ -545,7 +545,7 @@ export default function ComposerPage() {
                       className="p-3 rounded-lg border border-[--color-pulo-border] hover:border-[--color-pulo-accent]/50 cursor-pointer"
                     >
                       <div className="flex items-center gap-2 mb-1">
-                        <Badge variant="secondary" size="sm">{s.type}</Badge>
+                        <Badge variant="default" size="sm">{s.type}</Badge>
                         <span className="text-xs text-[--color-pulo-muted]">Score: {s.score}/10</span>
                       </div>
                       <p className="text-sm text-[--color-pulo-text]">{s.hook}</p>
@@ -592,7 +592,7 @@ export default function ComposerPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm">Draft Queue</CardTitle>
-                <Badge variant="secondary" size="sm">{drafts.length}</Badge>
+                <Badge variant="default" size="sm">{drafts.length}</Badge>
               </div>
             </CardHeader>
             <CardContent className="p-0">
@@ -609,7 +609,7 @@ export default function ComposerPage() {
                         <Badge
                           variant={
                             draft.status === 'published' ? 'success' :
-                            draft.status === 'ignored' ? 'secondary' : 'warning'
+                            draft.status === 'ignored' ? 'default' : 'warning'
                           }
                           size="sm"
                         >

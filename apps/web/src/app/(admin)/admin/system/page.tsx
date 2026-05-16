@@ -136,13 +136,13 @@ export default function AdminSystemPage() {
                 <span className="text-sm text-[--color-pulo-muted]">Status</span>
                 <StatusBadge status={getComponentStatus('api')} size="sm" />
               </div>
-              {getComponentDetails('api')?.version && (
+              {getComponentDetails('api')?.version != null && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-[--color-pulo-muted]">Version</span>
                   <span className="text-sm">{getComponentDetails('api')?.version as string}</span>
                 </div>
               )}
-              {getComponentDetails('api')?.nodeVersion && (
+              {getComponentDetails('api')?.nodeVersion != null && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-[--color-pulo-muted]">Node</span>
                   <span className="text-sm">{(getComponentDetails('api')?.nodeVersion as string)?.slice(1, 7)}</span>
@@ -164,13 +164,13 @@ export default function AdminSystemPage() {
                 <span className="text-sm text-[--color-pulo-muted]">Status</span>
                 <StatusBadge status={getComponentStatus('database')} size="sm" />
               </div>
-              {getComponentDetails('database')?.poolSize && (
+              {getComponentDetails('database')?.poolSize != null && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-[--color-pulo-muted]">Pool Size</span>
                   <span className="text-sm">{getComponentDetails('database')?.poolSize as number}</span>
                 </div>
               )}
-              {getComponentDetails('database')?.availableConnections && (
+              {getComponentDetails('database')?.availableConnections != null && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-[--color-pulo-muted]">Available</span>
                   <span className="text-sm">{getComponentDetails('database')?.availableConnections as number}</span>
@@ -192,13 +192,13 @@ export default function AdminSystemPage() {
                 <span className="text-sm text-[--color-pulo-muted]">Status</span>
                 <StatusBadge status={getComponentStatus('redis')} size="sm" />
               </div>
-              {getComponentDetails('redis')?.memoryUsedMb && (
+              {getComponentDetails('redis')?.memoryUsedMb != null && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-[--color-pulo-muted]">Memory</span>
                   <span className="text-sm">{getComponentDetails('redis')?.memoryUsedMb as number}MB</span>
                 </div>
               )}
-              {getComponentDetails('redis')?.connectedClients && (
+              {getComponentDetails('redis')?.connectedClients != null && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-[--color-pulo-muted]">Clients</span>
                   <span className="text-sm">{getComponentDetails('redis')?.connectedClients as number}</span>
@@ -220,16 +220,16 @@ export default function AdminSystemPage() {
                 <span className="text-sm text-[--color-pulo-muted]">Status</span>
                 <StatusBadge status={getComponentStatus('farcaster')} size="sm" />
               </div>
-              {getComponentDetails('farcaster')?.rateLimitRemaining && (
+              {getComponentDetails('farcaster')?.rateLimitRemaining != null && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-[--color-pulo-muted]">Rate Limit</span>
                   <span className="text-sm">{getComponentDetails('farcaster')?.rateLimitRemaining as number} remaining</span>
                 </div>
               )}
-              {getComponentDetails('farcaster')?.mode && (
+              {getComponentDetails('farcaster')?.mode != null && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-[--color-pulo-muted]">Mode</span>
-                  <Badge variant="secondary" size="sm">{getComponentDetails('farcaster')?.mode as string}</Badge>
+                  <Badge variant="default" size="sm">{getComponentDetails('farcaster')?.mode as string}</Badge>
                 </div>
               )}
             </CardContent>
@@ -248,16 +248,16 @@ export default function AdminSystemPage() {
                 <span className="text-sm text-[--color-pulo-muted]">Status</span>
                 <StatusBadge status={getComponentStatus('llm')} size="sm" />
               </div>
-              {getComponentDetails('llm')?.quotaRemaining && (
+              {getComponentDetails('llm')?.quotaRemaining != null && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-[--color-pulo-muted]">Quota</span>
                   <span className="text-sm">{(getComponentDetails('llm')?.quotaRemaining as number)?.toLocaleString()} remaining</span>
                 </div>
               )}
-              {getComponentDetails('llm')?.model && (
+              {getComponentDetails('llm')?.model != null && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-[--color-pulo-muted]">Model</span>
-                  <Badge variant="secondary" size="sm">{getComponentDetails('llm')?.model as string}</Badge>
+                  <Badge variant="default" size="sm">{getComponentDetails('llm')?.model as string}</Badge>
                 </div>
               )}
             </CardContent>
@@ -272,19 +272,19 @@ export default function AdminSystemPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-2">
-              {getComponentDetails('system')?.memoryUsedMb && (
+              {getComponentDetails('system')?.memoryUsedMb != null && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-[--color-pulo-muted]">Heap Used</span>
                   <span className="text-sm">{getComponentDetails('system')?.memoryUsedMb as number}MB</span>
                 </div>
               )}
-              {getComponentDetails('system')?.memoryTotalMb && (
+              {getComponentDetails('system')?.memoryTotalMb != null && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-[--color-pulo-muted]">Heap Total</span>
                   <span className="text-sm">{getComponentDetails('system')?.memoryTotalMb as number}MB</span>
                 </div>
               )}
-              {getComponentDetails('system')?.pid && (
+              {getComponentDetails('system')?.pid != null && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-[--color-pulo-muted]">PID</span>
                   <span className="text-sm">{getComponentDetails('system')?.pid as number}</span>

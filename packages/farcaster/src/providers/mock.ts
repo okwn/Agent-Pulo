@@ -24,7 +24,7 @@ import type {
 const MOCK_CASTS: Cast[] = [
   {
     hash: 'mock-cast-001',
-    text: 'Just claimed my $DEGEN airdrop! 🔥',
+    text: 'Just claimed my $DEGEN airdrop!',
     authorFid: 1,
     authorUsername: 'alice',
     authorDisplayName: 'Alice Chen',
@@ -50,13 +50,50 @@ const MOCK_CASTS: Cast[] = [
     recastsCount: 0,
     reactionsCount: 5,
   },
+  {
+    hash: 'mock-cast-003',
+    text: 'Check out this new DeFi protocol yields!',
+    authorFid: 3,
+    authorUsername: 'charlie',
+    authorDisplayName: 'Charlie Kim',
+    parentHash: null,
+    rootParentHash: null,
+    channelId: null,
+    timestamp: new Date(Date.now() - 15_000).toISOString(),
+    repliesCount: 7,
+    recastsCount: 3,
+    reactionsCount: 22,
+  },
 ];
 
 const MOCK_USERS: User[] = [
   { fid: 1, username: 'alice', displayName: 'Alice Chen', custodyAddress: '0x1234', bio: 'Builder', avatarUrl: null },
   { fid: 2, username: 'bob', displayName: 'Bob Martinez', custodyAddress: '0x5678', bio: 'Trader', avatarUrl: null },
+  { fid: 3, username: 'charlie', displayName: 'Charlie Kim', custodyAddress: '0x9abc', bio: 'DeFi researcher', avatarUrl: null },
   { fid: 1234, username: 'pulo_bot', displayName: 'PULO Agent', custodyAddress: '0xdef0', bio: 'AI agent', avatarUrl: null },
 ];
+
+// ─── Mock Rate Limiting Control ───────────────────────────────────────────────
+
+export interface MockRateLimitConfig {
+  enabled: boolean;
+  castsUntilRateLimit: number;
+  castsMade: number;
+}
+
+let mockRateLimit: MockRateLimitConfig = { enabled: false, castsUntilRateLimit: 5, castsMade: 0 };
+
+export function getMockRateLimitConfig(): MockRateLimitConfig {
+  return { ...mockRateLimit };
+}
+
+export function setMockRateLimit(enabled: boolean, castsUntilRateLimit = 5): void {
+  mockRateLimit = { enabled, castsUntilRateLimit, castsMade: 0 };
+}
+
+export function resetMockRateLimit(): void {
+  mockRateLimit = { enabled: false, castsUntilRateLimit: 5, castsMade: 0 };
+}
 
 // ─── Mock Read Provider ────────────────────────────────────────────────────────
 
@@ -73,7 +110,7 @@ class MockReadProvider implements IFarcasterReadProvider {
     return {
       rootCast: root,
       replies,
-      participants: [...new Set(replies.map(r => r.authorFid))],
+      participants: [root.authorFid, ...replies.map(r => r.authorFid)],
       castHashes: [root.hash, ...replies.map(r => r.hash)],
     };
   }
@@ -115,21 +152,31 @@ class MockReadProvider implements IFarcasterReadProvider {
   }
 }
 
-// ─── Mock Write Provider ───────────────────────────────────────────────────────
+// ─── Mock Write Provider ─────────────────────────────────────────────────────
 
 class MockWriteProviderImpl implements IFarcasterWriteProvider {
   private published: PublishResult[] = [];
 
   async publishCast(text: string, _options: PublishCastOptions): Promise<PublishResult> {
-    const hash = `mock-publish-${Date.now()}`;
+    if (mockRateLimit.enabled && mockRateLimit.castsMade >= mockRateLimit.castsUntilRateLimit) {
+      throw new Error('MOCK_RATE_LIMITED: Simulated rate limit reached');
+    }
+    const hash = `mock-publish-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const result: PublishResult = { hash, url: `https://warpcast.com/pulo_bot/${hash}` };
     this.published.push(result);
+    mockRateLimit.castsMade++;
     return result;
   }
 
-  async publishReply(_parentHash: string, text: string, _options: PublishReplyOptions): Promise<PublishResult> {
-    const hash = `mock-reply-${Date.now()}`;
-    return { hash, url: `https://warpcast.com/pulo_bot/${hash}` };
+  async publishReply(parentHash: string, text: string, _options: PublishReplyOptions): Promise<PublishResult> {
+    if (mockRateLimit.enabled && mockRateLimit.castsMade >= mockRateLimit.castsUntilRateLimit) {
+      throw new Error('MOCK_RATE_LIMITED: Simulated rate limit reached');
+    }
+    const hash = `mock-reply-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const result: PublishResult = { hash, url: `https://warpcast.com/pulo_bot/${hash}` };
+    this.published.push(result);
+    mockRateLimit.castsMade++;
+    return result;
   }
 
   async deleteCast(_hash: string): Promise<void> {
@@ -138,6 +185,10 @@ class MockWriteProviderImpl implements IFarcasterWriteProvider {
 
   getPublished(): PublishResult[] {
     return [...this.published];
+  }
+
+  clearPublished(): void {
+    this.published = [];
   }
 }
 
@@ -169,7 +220,7 @@ class MockNotificationProviderImpl implements IFarcasterNotificationProvider {
   }
 }
 
-// ─── Mock Webhook Verifier ────────────────────────────────────────────────────
+// ─── Mock Webhook Verifier ───────────────────────────────────────────────────
 
 class MockWebhookVerifierImpl implements IWebhookVerifier {
   async verifyMentionWebhook(request: { body: string | Buffer; signature: string }): Promise<WebhookVerificationResult> {
@@ -187,8 +238,6 @@ class MockWebhookVerifierImpl implements IWebhookVerifier {
 }
 
 // ─── Mock Composite Provider ──────────────────────────────────────────────────
-// IFarcasterProvider extends IFarcasterReadProvider, so all read methods must be
-// directly on the provider (not delegated to a sub-object).
 
 export class MockFarcasterProvider implements IFarcasterReadProvider {
   readonly mode: FarMode = 'mock';
@@ -205,8 +254,6 @@ export class MockFarcasterProvider implements IFarcasterReadProvider {
     this.notifications = new MockNotificationProviderImpl();
     this.webhook = new MockWebhookVerifierImpl();
   }
-
-  // ── Forward all IFarcasterReadProvider methods directly ──────────────────────
 
   async getCastByHash(hash: string): Promise<Cast> {
     return this.read.getCastByHash(hash);
@@ -240,13 +287,20 @@ export class MockFarcasterProvider implements IFarcasterReadProvider {
     return this.read.getUserRecentCasts(fid, options);
   }
 
-  // ── Convenience helpers (not required by interface) ─────────────────────────
-
   getWrite(): IFarcasterWriteProvider {
     return this.write;
   }
 
   getNotifications(): IFarcasterNotificationProvider {
     return this.notifications;
+  }
+
+  clearWriteHistory(): void {
+    if (this.write instanceof MockWriteProviderImpl) {
+      this.write.clearPublished();
+    }
+    if (this.notifications instanceof MockNotificationProviderImpl) {
+      this.notifications.clear();
+    }
   }
 }

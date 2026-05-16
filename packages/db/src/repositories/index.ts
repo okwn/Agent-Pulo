@@ -3,6 +3,7 @@ export { castRepository, threadRepository } from './casts.js';
 export { eventRepository, runRepository } from './events.js';
 export { truthCheckRepository } from './truth.js';
 export { trendRepository, trendSourceRepository } from './trends.js';
+export { usageRepository } from './usage.js';
 export { radarTrendRepository, radarKeywordRepository, radarChannelRepository } from './radar.js';
 export { alertRepository } from './alerts.js';
 export { safetyRepository, rateLimitRepository } from './safety.js';

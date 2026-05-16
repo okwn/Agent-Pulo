@@ -6,6 +6,7 @@ import { PlanBadge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/components/providers/auth-provider';
 import { User, Bell, CreditCard, Shield, Save, Loader2 } from 'lucide-react';
+import type { PlanTier } from '@/lib/mock-data';
 
 export default function SettingsPage() {
   const { user, loading } = useAuth();
@@ -58,7 +59,7 @@ export default function SettingsPage() {
             <div>
               <label className="text-sm text-[--color-pulo-muted] block mb-1">Plan</label>
               <div className="flex items-center gap-2">
-                <PlanBadge plan={user.plan as 'free' | 'pro' | 'team' | 'enterprise'} size="md" />
+                <PlanBadge plan={user.plan as PlanTier} size="md" />
               </div>
             </div>
           </div>

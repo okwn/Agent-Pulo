@@ -5,27 +5,54 @@ import { DataTable } from '@/components/ui/data-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/state';
-import { mockTechnicalDebt } from '@/lib/mock-data';
+import { getAdminDebt } from '@/lib/api';
 import { Wrench, Plus } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+
+interface DebtItem {
+  id: string;
+  title: string;
+  category: string;
+  priority: string;
+  estimatedHours: number;
+  createdAt: string;
+}
 
 export default function TechnicalDebtPage() {
-  const debt = mockTechnicalDebt;
+  const [debt, setDebt] = useState<DebtItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadDebt = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await getAdminDebt() as { debt: DebtItem[] };
+      setDebt(data.debt);
+    } catch (e) {
+      console.error('Failed to load debt', e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadDebt();
+  }, [loadDebt]);
 
   const columns = [
     {
       key: 'title',
       header: 'Title',
-      render: (item: typeof debt[0]) => <span className="font-medium">{item.title}</span>,
+      render: (item: DebtItem) => <span className="font-medium">{item.title}</span>,
     },
     {
       key: 'category',
       header: 'Category',
-      render: (item: typeof debt[0]) => <Badge>{item.category}</Badge>,
+      render: (item: DebtItem) => <Badge>{item.category}</Badge>,
     },
     {
       key: 'priority',
       header: 'Priority',
-      render: (item: typeof debt[0]) => (
+      render: (item: DebtItem) => (
         <Badge variant={item.priority === 'high' ? 'danger' : item.priority === 'medium' ? 'warning' : 'default'}>
           {item.priority}
         </Badge>
@@ -34,7 +61,7 @@ export default function TechnicalDebtPage() {
     {
       key: 'estimatedHours',
       header: 'Est. Hours',
-      render: (item: typeof debt[0]) => item.estimatedHours,
+      render: (item: DebtItem) => item.estimatedHours,
     },
   ];
 

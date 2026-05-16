@@ -1,7 +1,7 @@
 // @pulo/billing — Subscription and plan management
 // Provides subscription provider abstraction and plan entitlements
 
-import type { UserPreference } from '@pulo/db/src/schema.js';
+import type { UserPreference } from '../../db/src/schema.js';
 
 // ─── Plan Tiers ────────────────────────────────────────────────────────────────
 
@@ -514,7 +514,7 @@ export function shouldShowUpgradeCTA(
   // If user is hitting limits, suggest upgrade
   if (usage) {
     if (requestedFeature === 'dailyTruthChecks' && usage.truthChecksUsed >= usage.truthChecksLimit) {
-      return { show: true, suggestedPlan: this.suggestUpgradeFrom(currentPlan, 'dailyTruthChecks') };
+      return { show: true, suggestedPlan: suggestUpgradeFrom(currentPlan, 'dailyTruthChecks') };
     }
     if (requestedFeature === 'directCastAlerts' && !featureValue) {
       // Feature requires consent even in higher plans

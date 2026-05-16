@@ -109,7 +109,8 @@ export class TrendClusterer {
     const map: Record<string, RadarCategory> = {
       claim: 'claim', airdrop: 'airdrop', token: 'token_launch',
       grant: 'grant', hackathon: 'hackathon', reward: 'reward_program',
-      scam: 'scam_warning',
+      scam: 'scam_warning', fake: 'scam_warning', phishing: 'scam_warning',
+      farcaster: 'farcaster_meta', frame: 'miniapp_opportunity',
     };
     for (const kw of keywords) {
       const cat = map[kw.toLowerCase()];

@@ -1,18 +1,45 @@
 'use client';
 
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { AlertCard } from '@/components/features/alert-card';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/state';
-import { mockAlerts } from '@/lib/mock-data';
-import { Bell, Plus, Filter } from 'lucide-react';
-import { useState } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { getAdminAlertLogs } from '@/lib/api';
+import { Bell, Plus, Filter, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+
+interface AlertLog {
+  id: string;
+  alertId: string;
+  userFid: number;
+  channel: string;
+  status: 'delivered' | 'failed' | 'pending';
+  error?: string;
+  deliveredAt: string;
+}
 
 export default function AlertsAdminPage() {
-  const alerts = mockAlerts;
+  const [logs, setLogs] = useState<AlertLog[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
 
-  const filteredAlerts = filter === 'all' ? alerts : alerts.filter(a => a.type === filter);
+  const loadLogs = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await getAdminAlertLogs() as { logs: AlertLog[] };
+      setLogs(data.logs);
+    } catch (e) {
+      console.error('Failed to load alert logs', e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadLogs();
+  }, [loadLogs]);
+
+  const filteredLogs = filter === 'all' ? logs : logs.filter(a => a.status === filter);
 
   return (
     <div className="space-y-6">
@@ -30,7 +57,7 @@ export default function AlertsAdminPage() {
       {/* Filters */}
       <div className="flex items-center gap-2">
         <Filter className="w-4 h-4 text-[--color-pulo-muted]" />
-        {['all', 'trend', 'mention', 'safety', 'system', 'billing'].map((f) => (
+        {['all', 'delivered', 'failed', 'pending'].map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
@@ -45,17 +72,39 @@ export default function AlertsAdminPage() {
         ))}
       </div>
 
-      {filteredAlerts.length === 0 ? (
+      {loading ? (
+        <Card>
+          <CardContent className="p-8 text-center text-[--color-pulo-muted]">Loading alert logs...</CardContent>
+        </Card>
+      ) : filteredLogs.length === 0 ? (
         <EmptyState
           icon={<Bell className="w-8 h-8" />}
-          title="No alerts"
-          description="Alerts will appear here."
-          action={{ label: 'Refresh', onClick: () => {} }}
+          title="No alert logs"
+          description="Alert delivery logs will appear here."
+          action={{ label: 'Refresh', onClick: loadLogs }}
         />
       ) : (
         <div className="space-y-3">
-          {filteredAlerts.map((alert) => (
-            <AlertCard key={alert.id} alert={alert} />
+          {filteredLogs.map((log) => (
+            <Card key={log.id}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {log.status === 'delivered' && <CheckCircle className="w-4 h-4 text-[--color-pulo-success]" />}
+                    {log.status === 'failed' && <XCircle className="w-4 h-4 text-[--color-pulo-danger]" />}
+                    {log.status === 'pending' && <Clock className="w-4 h-4 text-[--color-pulo-warning]" />}
+                    <div>
+                      <p className="text-sm font-medium">Alert {log.alertId}</p>
+                      <p className="text-xs text-[--color-pulo-muted]">User FID: {log.userFid} · {log.channel}</p>
+                    </div>
+                  </div>
+                  <Badge variant={log.status === 'delivered' ? 'success' : log.status === 'failed' ? 'danger' : 'warning'} size="sm">
+                    {log.status}
+                  </Badge>
+                </div>
+                {log.error && <p className="text-xs text-[--color-pulo-danger] mt-2">Error: {log.error}</p>}
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}

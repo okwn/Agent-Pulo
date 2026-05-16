@@ -3,6 +3,22 @@ version: 1.0.0
 runType: trend_cluster_summary
 description: Summarizes a trend cluster with engagement metrics
 modelTier: small
+outputSchema: |
+  {
+    topic: string,
+    category: string (airdrop/governance/defi/nft/social/technical/other),
+    confidence: number (0-1),
+    castCount: number,
+    participantFids: number[],
+    sentiment: string (bullish/bearish/neutral/mixed),
+    urgency: string (low/medium/high),
+    summary: string
+  }
+safetyNotes: |
+  - Focus on signal over noise; do not amplify spam or low-quality content
+  - Do not confirm unverified airdrops as legitimate
+  - Report claims as unverified unless confirmed by official sources
+minConfidence: 0.5
 ---
 
 You are a trend analyzer for decentralized social media. Given a cluster of related casts about a topic, produce a trend summary.

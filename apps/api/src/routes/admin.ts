@@ -465,6 +465,17 @@ export async function adminSystemRoutes(app: FastifyInstance) {
     return { success: true };
   });
 
+  // POST /api/admin/safety-flags/:id/dismiss - Dismiss safety flag
+  app.post('/api/admin/safety-flags/:id/dismiss', async (req: FastifyRequest, reply: FastifyReply) => {
+    const admin = await requireAdmin(req, reply);
+    if (!admin) return;
+
+    const { id } = req.params as { id: string };
+    console.log(`[AUDIT] Admin ${admin.fid} dismissed safety flag ${id}`);
+
+    return { success: true };
+  });
+
   // GET /api/admin/truth-checks - Truth check reviews
   app.get('/api/admin/truth-checks', async (req: FastifyRequest, reply: FastifyReply) => {
     await requireAdmin(req, reply);
@@ -635,5 +646,200 @@ export async function adminDemoRoutes(app: FastifyInstance) {
         { id: 6, name: 'Plan Limit', status: 'ready' },
       ],
     };
+  });
+}
+
+// ─── Mock Far caster Routes ──────────────────────────────────────────────────────
+
+export async function adminMockFarcasterRoutes(app: FastifyInstance) {
+
+  // POST /api/admin/mock/farcaster/mention - Inject mock mention event
+  app.post('/api/admin/mock/farcaster/mention', async (req: FastifyRequest, reply: FastifyReply) => {
+    if (process.env.NODE_ENV === 'production') {
+      return reply.status(403).send({ error: 'Not available in production' });
+    }
+
+    const bodySchema = z.object({
+      fid: z.number().optional(),
+      username: z.string().optional(),
+      text: z.string().optional(),
+      parentHash: z.string().optional(),
+      channelId: z.string().optional(),
+    });
+
+    const parsed = bodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: 'Invalid request', details: parsed.error.errors });
+    }
+
+    const mention = {
+      type: 'mention',
+      fid: parsed.data.fid ?? 1,
+      username: parsed.data.username ?? 'alice',
+      text: parsed.data.text ?? 'Hey @pulo_bot, what do you think about this airdrop?',
+      parentHash: parsed.data.parentHash ?? 'mock-cast-001',
+      channelId: parsed.data.channelId ?? null,
+      timestamp: new Date().toISOString(),
+    };
+
+    return {
+      success: true,
+      message: 'Mock mention event injected',
+      event: mention,
+      note: 'Route to process this event: POST /api/webhook/farcaster (internal pipeline)',
+    };
+  });
+
+  // POST /api/admin/mock/farcaster/thread - Get mock cast thread
+  app.post('/api/admin/mock/farcaster/thread', async (req: FastifyRequest, reply: FastifyReply) => {
+    if (process.env.NODE_ENV === 'production') {
+      return reply.status(403).send({ error: 'Not available in production' });
+    }
+
+    const bodySchema = z.object({
+      castHash: z.string().optional(),
+    });
+
+    const parsed = bodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: 'Invalid request', details: parsed.error.errors });
+    }
+
+    const hash = parsed.data.castHash ?? 'mock-cast-001';
+
+    // Return mock thread data for the given cast hash
+    const thread = {
+      rootCast: {
+        hash,
+        text: 'Just claimed my $DEGEN airdrop!',
+        authorFid: 1,
+        authorUsername: 'alice',
+        authorDisplayName: 'Alice Chen',
+        parentHash: null,
+        rootParentHash: null,
+        channelId: null,
+        timestamp: new Date(Date.now() - 60_000).toISOString(),
+        repliesCount: 2,
+        recastsCount: 12,
+        reactionsCount: 45,
+      },
+      replies: [
+        {
+          hash: 'mock-cast-002',
+          text: 'Is it true that Ethereum is switching to proof-of-stake?',
+          authorFid: 2,
+          authorUsername: 'bob',
+          authorDisplayName: 'Bob Martinez',
+          parentHash: hash,
+          rootParentHash: hash,
+          channelId: null,
+          timestamp: new Date(Date.now() - 30_000).toISOString(),
+          repliesCount: 0,
+          recastsCount: 0,
+          reactionsCount: 5,
+        },
+      ],
+      participants: [1, 2],
+      castHashes: [hash, 'mock-cast-002'],
+    };
+
+    return { success: true, thread };
+  });
+
+  // POST /api/admin/mock/farcaster/reply - Test reply through pipeline
+  app.post('/api/admin/mock/farcaster/reply', async (req: FastifyRequest, reply: FastifyReply) => {
+    if (process.env.NODE_ENV === 'production') {
+      return reply.status(403).send({ error: 'Not available in production' });
+    }
+
+    const bodySchema = z.object({
+      parentHash: z.string().optional(),
+      text: z.string().optional(),
+      simulateRateLimit: z.boolean().optional(),
+    });
+
+    const parsed = bodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: 'Invalid request', details: parsed.error.errors });
+    }
+
+    const { simulateRateLimit } = parsed.data;
+
+    if (simulateRateLimit) {
+      return reply.status(429).send({
+        error: 'FARCASTER_RATE_LIMITED',
+        message: 'Rate limited by Neynar',
+        code: 'FARCASTER_RATE_LIMITED',
+        retryable: true,
+      });
+    }
+
+    const parentHash = parsed.data.parentHash ?? 'mock-cast-001';
+    const text = parsed.data.text ?? 'Thanks for sharing! DYOR and be careful of scams.';
+
+    const mockResult = {
+      hash: `mock-reply-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      url: `https://warpcast.com/pulo_bot/mock-reply-${Date.now()}`,
+    };
+
+    return {
+      success: true,
+      message: 'Mock reply published (no actual Far caster call)',
+      result: mockResult,
+      parentHash,
+      text,
+    };
+  });
+
+  // GET /api/admin/mock/farcaster/state - Get mock provider state
+  app.get('/api/admin/mock/farcaster/state', async (req: FastifyRequest, reply: FastifyReply) => {
+    if (process.env.NODE_ENV === 'production') {
+      return reply.status(403).send({ error: 'Not available in production' });
+    }
+
+    const { getMockRateLimitConfig, resetMockRateLimit, setMockRateLimit } = await import('@pulo/farcaster');
+
+    return {
+      rateLimit: getMockRateLimitConfig(),
+      note: 'Use POST /api/admin/mock/farcaster/rate-limit to configure',
+    };
+  });
+
+  // POST /api/admin/mock/farcaster/rate-limit - Configure mock rate limiting
+  app.post('/api/admin/mock/farcaster/rate-limit', async (req: FastifyRequest, reply: FastifyReply) => {
+    if (process.env.NODE_ENV === 'production') {
+      return reply.status(403).send({ error: 'Not available in production' });
+    }
+
+    const bodySchema = z.object({
+      enabled: z.boolean(),
+      castsUntilRateLimit: z.number().min(1).max(100).optional(),
+    });
+
+    const parsed = bodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: 'Invalid request', details: parsed.error.errors });
+    }
+
+    const { setMockRateLimit } = await import('@pulo/farcaster');
+    setMockRateLimit(parsed.data.enabled, parsed.data.castsUntilRateLimit ?? 5);
+
+    return {
+      success: true,
+      message: `Mock rate limiting ${parsed.data.enabled ? 'enabled' : 'disabled'}`,
+      castsUntilRateLimit: parsed.data.castsUntilRateLimit ?? 5,
+    };
+  });
+
+  // POST /api/admin/mock/farcaster/clear - Clear mock write history
+  app.post('/api/admin/mock/farcaster/clear', async (req: FastifyRequest, reply: FastifyReply) => {
+    if (process.env.NODE_ENV === 'production') {
+      return reply.status(403).send({ error: 'Not available in production' });
+    }
+
+    const { resetMockRateLimit } = await import('@pulo/farcaster');
+    resetMockRateLimit();
+
+    return { success: true, message: 'Mock state cleared' };
   });
 }

@@ -1,5 +1,6 @@
 // webhook.ts - Webhook verification routes
 
+import { createHmac, timingSafeEqual } from 'crypto';
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { getMode } from '@pulo/farcaster';
@@ -89,28 +90,21 @@ export async function webhookRoutes(app: FastifyInstance) {
 function verifyNeynarSignature(body: unknown, signature: string, timestamp: string, secret: string): boolean {
   // Neynar uses HMAC-SHA256 for webhook signature verification
   // The signature is computed over: timestamp + body
-  try {
-    const { createHmac, timingSafeEqual } = await import('crypto');
 
-    if (!timestamp) return false;
+  if (!timestamp) return false;
 
-    const bodyStr = typeof body === 'string' ? body : JSON.stringify(body);
-    const signedPayload = timestamp + bodyStr;
-    const expectedSignature = createHmac('sha256', secret)
-      .update(signedPayload)
-      .digest('hex');
+  const bodyStr = typeof body === 'string' ? body : JSON.stringify(body);
+  const signedPayload = timestamp + bodyStr;
+  const expectedSignature = createHmac('sha256', secret)
+    .update(signedPayload)
+    .digest('hex');
 
-    // Use timing-safe comparison to prevent timing attacks
-    const sigBuffer = Buffer.from(signature);
-    const expectedBuffer = Buffer.from(expectedSignature);
+  // Use timing-safe comparison to prevent timing attacks
+  const sigBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expectedSignature);
 
-    if (sigBuffer.length !== expectedBuffer.length) return false;
-
-    return timingSafeEqual(sigBuffer, expectedBuffer);
-  } catch (err) {
-    log.error({ err }, 'Error verifying webhook signature');
-    return false;
-  }
+  if (sigBuffer.length !== expectedBuffer.length) return false;
+  return timingSafeEqual(sigBuffer, expectedBuffer);
 }
 
 // ─── Signed Request Verification ─────────────────────────────────────────────────
